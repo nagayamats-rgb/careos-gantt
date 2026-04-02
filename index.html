@@ -576,9 +576,9 @@ var DRIVE_FOLDER_MAP = {
 function getDriveUrl(doc){
   var folderId = DRIVE_FOLDER_MAP[doc.path];
   if(folderId){
-    return 'https://drive.google.com/drive/folders/' + folderId + '?q=' + encodeURIComponent(doc.name);
+    return 'https://drive.google.com/drive/folders/' + folderId;
   }
-  return 'https://drive.google.com/drive/folders/18CWzjfAGg83j8OKL17vv6CKK4bWBKGj_?q=' + encodeURIComponent(doc.name);
+  return 'https://drive.google.com/drive/folders/18CWzjfAGg83j8OKL17vv6CKK4bWBKGj_';
 }
 
 // ========== DOC PANEL ==========
