@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CareOS 分岐入力UI設計 — 支援カルテDX化マスタ（OCR統合版v2.0）</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;background:#F5F7FA;color:#333}
+.header{background:#1A1A2E;color:#fff;padding:20px 32px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:22px;font-weight:600}
+.header .badge{background:#27AE60;padding:4px 14px;border-radius:20px;font-size:14px;font-weight:600}
+.tabs{display:flex;background:#fff;border-bottom:2px solid #E0E0E0;padding:0 24px;overflow-x:auto}
+.tab{padding:14px 20px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:3px solid transparent;white-space:nowrap;transition:.2s}
+.tab:hover{background:#F0F4FF}
+.tab.active{border-bottom-color:#4A90D9;color:#4A90D9;font-weight:700}
+.content{max-width:1200px;margin:24px auto;padding:0 24px}
+.tab-content{display:none}.tab-content.active{display:block}
+.dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:32px}
+.stat-card{background:#fff;border-radius:12px;padding:20px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.stat-card .num{font-size:36px;font-weight:700;color:#4A90D9}
+.stat-card .num.green{color:#27AE60}
+.stat-card .num.orange{color:#E67E22}
+.stat-card .label{font-size:13px;color:#666;margin-top:4px}
+.pattern-bar{display:flex;height:36px;border-radius:8px;overflow:hidden;margin:16px 0}
+.pattern-bar div{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;transition:.3s}
+.section{background:#fff;border-radius:12px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
+.section-header{background:#484237;color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.section-header h3{font-size:16px;font-weight:600}
+.section-header .count{background:rgba(255,255,255,.2);padding:2px 10px;border-radius:12px;font-size:12px}
+.section-body{padding:16px 20px;display:none}
+.section.open .section-body{display:block}
+.arrow{transition:.3s;font-size:12px}
+.section.open .arrow{transform:rotate(180deg)}
+.field-card{border:1px solid #E8E8E8;border-radius:10px;margin-bottom:10px;overflow:hidden;transition:.2s}
+.field-card:hover{border-color:#4A90D9;box-shadow:0 2px 12px rgba(74,144,217,.12)}
+.field-head{padding:12px 16px;display:flex;align-items:center;gap:10px;background:#FAFAFA;cursor:pointer}
+.field-head .icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;flex-shrink:0}
+.field-head .fname{font-weight:600;font-size:14px;flex:1}
+.field-head .meta{font-size:12px;color:#888}
+.field-detail{padding:16px;display:none;border-top:1px solid #EEE}
+.field-card.open .field-detail{display:block}
+.chip{display:inline-block;padding:5px 12px;margin:3px;border:1px solid #DDD;border-radius:20px;font-size:12px;cursor:pointer;transition:.2s}
+.chip:hover{background:#F0F4FF;border-color:#4A90D9}
+.chip.selected{background:#4A90D9;color:#fff;border-color:#4A90D9}
+.demo-panel{background:#fff;border-radius:12px;padding:24px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.06);border:2px solid #27AE60}
+.prompt{font-size:14px;font-weight:600;margin:8px 0}
+.radio-group{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.radio-opt{padding:8px 16px;border:2px solid #DDD;border-radius:8px;cursor:pointer;font-size:13px;transition:.2s}
+.radio-opt:hover{border-color:#4A90D9}
+.radio-opt.selected{background:#4A90D9;color:#fff;border-color:#4A90D9}
+.text-voice{display:flex;gap:8px;margin-top:8px}
+.text-voice input{flex:1;padding:10px;border:1px solid #DDD;border-radius:8px;font-size:13px}
+.mic-btn{width:42px;height:42px;border:none;background:#E74C3C;color:#fff;border-radius:8px;cursor:pointer;font-size:18px}
+.level-label{font-size:11px;font-weight:700;color:#fff;display:inline-block;padding:2px 8px;border-radius:4px;margin-bottom:6px}
+.level-label.l1{background:#4A90D9}.level-label.l2{background:#E67E22}.level-label.l3{background:#27AE60}
+.flow-box{padding:12px 20px;border-radius:8px;color:#fff;font-size:13px;font-weight:600;text-align:center;min-width:120px}
+.flow-arrow{font-size:20px;color:#999}
+.method-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;margin-left:6px}
+.search-box{width:100%;padding:12px 16px;border:2px solid #DDD;border-radius:8px;font-size:14px;margin-bottom:20px}
+.search-box:focus{outline:none;border-color:#4A90D9}
+@media(max-width:768px){
+  .dashboard{grid-template-columns:1fr 1fr}
+  .content{padding:0 12px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>CareOS 支援カルテ 分岐入力UI設計</h1>
+  <div class="badge">タップカバー率 95%+</div>
+</div>
+
+<div class="tabs" id="tabs">
+  <div class="tab active" data-tab="overview">概要・カバレッジ</div>
+  <div class="tab" data-tab="sections">セクション別UI設計</div>
+  <div class="tab" data-tab="demo">実動デモ</div>
+  <div class="tab" data-tab="dbmap">DB連携マッピング</div>
+  <div class="tab" data-tab="flow">入力フロー全体図</div>
+  <div class="tab" data-tab="method">6ステップ方法論</div>
+  <div class="tab" data-tab="impact">支援品質インパクト</div>
+</div>
+
+<div class="content">
+  <!-- TAB: 概要 -->
+  <div id="tab-overview" class="tab-content active">
+    <div class="dashboard">
+      <div class="stat-card"><div class="num">185</div><div class="label">統合フィールド</div></div>
+      <div class="stat-card"><div class="num">1,544</div><div class="label">統合選択肢</div></div>
+      <div class="stat-card"><div class="num green">95%+</div><div class="label">タップ入力カバー率</div></div>
+      <div class="stat-card"><div class="num orange">7</div><div class="label">UIパターン</div></div>
+      <div class="stat-card"><div class="num">16</div><div class="label">パターンカテゴリ</div></div>
+      <div class="stat-card"><div class="num">10</div><div class="label">セクション</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
+      <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.06)">
+        <h3 style="font-size:16px;margin-bottom:8px">データソース内訳</h3>
+        <table style="width:100%;font-size:13px;border-collapse:collapse">
+          <tr style="background:#F0F4FF"><th style="padding:8px;text-align:left">ソース</th><th style="text-align:right">フィールド</th><th style="text-align:right">選択肢</th></tr>
+          <tr><td style="padding:6px">印刷選択肢（3バージョン比較）</td><td style="text-align:right;font-weight:700">136</td><td style="text-align:right;font-weight:700">967</td></tr>
+          <tr style="background:#FAFAFA"><td style="padding:6px">手書きOCR（形態素解析→構造化）</td><td style="text-align:right;font-weight:700">49</td><td style="text-align:right;font-weight:700">577</td></tr>
+          <tr style="background:#E8F5E9"><td style="padding:6px;font-weight:700">統合</td><td style="text-align:right;font-weight:700;color:#27AE60">185</td><td style="text-align:right;font-weight:700;color:#27AE60">1,544</td></tr>
+        </table>
+      </div>
+      <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.06)">
+        <h3 style="font-size:16px;margin-bottom:8px">7つのUIパターン分布</h3>
+        <div class="pattern-bar">
+          <div style="width:44.7%;background:#9B59B6" title="single_select_plus: 21">📋 21</div>
+<div style="width:29.8%;background:#3498DB" title="quantity_input: 14">🔢 14</div>
+<div style="width:8.5%;background:#E67E22" title="tag_select: 4">🏷 4</div>
+<div style="width:6.4%;background:#2ECC71" title="time_schedule: 3">⏰ 3</div>
+<div style="width:4.3%;background:#E74C3C" title="two_stage: 2">🔀 2</div>
+<div style="width:4.3%;background:#1ABC9C" title="grid_freetext: 2">📊 2</div>
+<div style="width:3%;background:#8E44AD" title="branching_freetext: 1">🌳 1</div>
+
+        </div>
+        <table style="width:100%;font-size:12px;border-collapse:collapse;margin-top:8px">
+          <tr style="background:#F5F3EE"><th style="padding:5px;text-align:left">パターン</th><th style="text-align:center">数</th><th style="text-align:left">説明</th></tr>
+          <tr><td style="padding:6px">📋 single_select_plus</td><td style="text-align:center">21</td><td>選択肢+自由記述</td></tr>
+<tr><td style="padding:6px">🔢 quantity_input</td><td style="text-align:center">14</td><td>数値入力</td></tr>
+<tr><td style="padding:6px">🏷 tag_select</td><td style="text-align:center">4</td><td>タグ選択</td></tr>
+<tr><td style="padding:6px">⏰ time_schedule</td><td style="text-align:center">3</td><td>タイムライン</td></tr>
+<tr><td style="padding:6px">🔀 two_stage</td><td style="text-align:center">2</td><td>2段階選択</td></tr>
+<tr><td style="padding:6px">📊 grid_freetext</td><td style="text-align:center">2</td><td>グリッド+記述</td></tr>
+<tr><td style="padding:6px">🌳 branching_freetext</td><td style="text-align:center">1</td><td>3層分岐</td></tr>
+
+        </table>
+      </div>
+    </div>
+
+    <h2 style="font-size:18px;margin-bottom:12px">セクション別フィールド・選択肢</h2>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+<div style="width:200px;font-size:13px;font-weight:500;text-align:right">表紙</div>
+<div style="flex:1;background:#E8E8E8;border-radius:4px;height:28px;position:relative">
+<div style="width:100%;background:#27AE60;height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:700">7F / 79選択肢</div></div></div>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+<div style="width:200px;font-size:13px;font-weight:500;text-align:right">生活の様子</div>
+<div style="flex:1;background:#E8E8E8;border-radius:4px;height:28px;position:relative">
+<div style="width:100%;background:#27AE60;height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:700">1F / 8選択肢</div></div></div>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+<div style="width:200px;font-size:13px;font-weight:500;text-align:right">食事・飲食状況</div>
+<div style="flex:1;background:#E8E8E8;border-radius:4px;height:28px;position:relative">
+<div style="width:100%;background:#27AE60;height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:700">13F / 130選択肢</div></div></div>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+<div style="width:200px;font-size:13px;font-weight:500;text-align:right">排泄状況</div>
+<div style="flex:1;background:#E8E8E8;border-radius:4px;height:28px;position:relative">
+<div style="width:100%;background:#27AE60;height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:700">6F / 55選択肢</div></div></div>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+<div style="width:200px;font-size:13px;font-weight:500;text-align:right">就労・能力</div>
+<div style="flex:1;background:#E8E8E8;border-radius:4px;height:28px;position:relative">
+<div style="width:100%;background:#27AE60;height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:700">3F / 30選択肢</div></div></div>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+<div style="width:200px;font-size:13px;font-weight:500;text-align:right">生活動作</div>
+<div style="flex:1;background:#E8E8E8;border-radius:4px;height:28px;position:relative">
+<div style="width:100%;background:#27AE60;height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:700">8F / 79選択肢</div></div></div>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+<div style="width:200px;font-size:13px;font-weight:500;text-align:right">コミュニケーション</div>
+<div style="flex:1;background:#E8E8E8;border-radius:4px;height:28px;position:relative">
+<div style="width:100%;background:#27AE60;height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:700">2F / 25選択肢</div></div></div>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+<div style="width:200px;font-size:13px;font-weight:500;text-align:right">行動状況</div>
+<div style="flex:1;background:#E8E8E8;border-radius:4px;height:28px;position:relative">
+<div style="width:100%;background:#27AE60;height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:700">1F / 7選択肢</div></div></div>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+<div style="width:200px;font-size:13px;font-weight:500;text-align:right">本人・家族の意向・目標</div>
+<div style="flex:1;background:#E8E8E8;border-radius:4px;height:28px;position:relative">
+<div style="width:100%;background:#27AE60;height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:700">4F / 66選択肢</div></div></div>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+<div style="width:200px;font-size:13px;font-weight:500;text-align:right">支援シート</div>
+<div style="flex:1;background:#E8E8E8;border-radius:4px;height:28px;position:relative">
+<div style="width:100%;background:#27AE60;height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:700">2F / 88選択肢</div></div></div>
+
+  </div>
+
+  <!-- TAB: セクション別 -->
+  <div id="tab-sections" class="tab-content">
+    <input type="text" class="search-box" id="field-search" placeholder="フィールド名・カテゴリで検索..." oninput="filterFields(this.value)">
+    <div id="sections-container"></div>
+  </div>
+
+  <!-- TAB: デモ -->
+  <div id="tab-demo" class="tab-content">
+    <div class="demo-panel">
+      <h4>実動デモ: 「歩行」フィールド — single_select_plus パターン</h4>
+      <p style="font-size:13px;color:#666;margin-bottom:16px">L1選択肢タップ → L2詳細選択 → L3音声入力の3レベル分岐を体験。</p>
+
+      <div class="ui-level">
+        <span class="level-label l1">L1</span>
+        <div class="prompt">歩行の自立度は？</div>
+        <div class="radio-group" id="demo-l1">
+          <div class="radio-opt" onclick="demoL1(this,'自立')">自立</div>
+          <div class="radio-opt" onclick="demoL1(this,'その他')">その他（支援あり）</div>
+        </div>
+      </div>
+
+      <div class="ui-level" id="demo-l2-wrap" style="display:none">
+        <span class="level-label l2">L2</span>
+        <div class="prompt">該当する項目を選択（複数可）</div>
+        <div class="chips" id="demo-l2" style="display:flex;flex-wrap:wrap;gap:4px">
+          <div class="chip" onclick="toggleChip(this)">手すり</div>
+          <div class="chip" onclick="toggleChip(this)">手引き</div>
+          <div class="chip" onclick="toggleChip(this)">杖</div>
+          <div class="chip" onclick="toggleChip(this)">歩行器</div>
+          <div class="chip" onclick="toggleChip(this)">エレベーター要</div>
+          <div class="chip" onclick="toggleChip(this)">ふらつき有り</div>
+          <div class="chip" onclick="toggleChip(this)">短距離なら歩行可</div>
+          <div class="chip" onclick="toggleChip(this)">白杖</div>
+          <div class="chip" onclick="toggleChip(this)">転倒注意</div>
+          <div class="chip" onclick="toggleChip(this)">車椅子</div>
+        </div>
+      </div>
+
+      <div class="ui-level" id="demo-l3-wrap" style="margin-top:12px">
+        <span class="level-label l3">L3</span>
+        <div class="prompt">補足（自由記述 / 音声入力）</div>
+        <div class="text-voice">
+          <input type="text" placeholder="例: 右足に装具装着、雨天時は車椅子を使用" id="demo-l3" oninput="updateDemoResult()">
+          <button class="mic-btn" onclick="demoVoice()" title="音声入力">&#x1f3a4;</button>
+        </div>
+      </div>
+
+      <div id="demo-result" style="margin-top:20px;padding:16px;background:#fff;border-radius:8px;border:2px solid #27AE60;display:none">
+        <strong style="color:#27AE60">生成されるJSON:</strong>
+        <pre id="demo-json" style="font-size:12px;margin-top:8px;white-space:pre-wrap;color:#484237"></pre>
+      </div>
+    </div>
+
+    <div class="demo-panel" style="border-color:#E67E22">
+      <h4 style="color:#E67E22">実動デモ: 「パニック対応」— two_stage パターン</h4>
+      <p style="font-size:13px;color:#666;margin-bottom:16px">L1: 行動パターン選択 → L2: 対応方法選択 の2段階</p>
+      <div class="ui-level">
+        <span class="level-label l1">L1</span>
+        <div class="prompt">パニック時の行動パターン</div>
+        <div class="radio-group">
+          <div class="radio-opt" onclick="this.parentElement.querySelectorAll('.radio-opt').forEach(function(r){r.classList.remove('selected')});this.classList.add('selected')">大声を出す</div>
+          <div class="radio-opt" onclick="this.parentElement.querySelectorAll('.radio-opt').forEach(function(r){r.classList.remove('selected')});this.classList.add('selected')">物を投げる</div>
+          <div class="radio-opt" onclick="this.parentElement.querySelectorAll('.radio-opt').forEach(function(r){r.classList.remove('selected')});this.classList.add('selected')">自傷行為</div>
+          <div class="radio-opt" onclick="this.parentElement.querySelectorAll('.radio-opt').forEach(function(r){r.classList.remove('selected')});this.classList.add('selected')">帰宅要求</div>
+        </div>
+      </div>
+      <div class="ui-level" style="margin-top:12px">
+        <span class="level-label l2">L2</span>
+        <div class="prompt">対応方法</div>
+        <div class="chips" style="display:flex;flex-wrap:wrap;gap:4px">
+          <div class="chip" onclick="toggleChip(this)">名前を呼ばず見守る</div>
+          <div class="chip" onclick="toggleChip(this)">離れて見守る</div>
+          <div class="chip" onclick="toggleChip(this)">静かな場所に移動</div>
+          <div class="chip" onclick="toggleChip(this)">スタッフ交代</div>
+          <div class="chip" onclick="toggleChip(this)">好きなものを提示</div>
+          <div class="chip" onclick="toggleChip(this)">声のトーンを下げる</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: DB連携 -->
+  <div id="tab-dbmap" class="tab-content">
+    <h2 style="font-size:18px;margin-bottom:16px">セクション x DBテーブル連携マッピング</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)">
+      <thead>
+        <tr style="background:#484237;color:#fff">
+          <th style="padding:10px;text-align:left">セクション</th>
+          <th style="padding:10px;text-align:center">フィールド</th>
+          <th style="padding:10px;text-align:center">選択肢</th>
+          <th style="padding:10px;text-align:left">主要DBテーブル</th>
+          <th style="padding:10px;text-align:left">UIパターン</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding:8px;border-bottom:1px solid #EEE">表紙</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">7</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">79</td>
+        <td style="border-bottom:1px solid #EEE"><code>residents / support_charts</code></td>
+        <td style="border-bottom:1px solid #EEE;font-size:11px">single_select_plus, tag_select, time_schedule</td></tr>
+        <tr style="background:#FAFAFA"><td style="padding:8px;border-bottom:1px solid #EEE">生活の様子</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">1</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">8</td>
+        <td style="border-bottom:1px solid #EEE"><code>support_charts (lifestyle_json)</code></td>
+        <td style="border-bottom:1px solid #EEE;font-size:11px">time_schedule</td></tr>
+        <tr><td style="padding:8px;border-bottom:1px solid #EEE">食事・飲食状況</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">13</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">130</td>
+        <td style="border-bottom:1px solid #EEE"><code>meal_profiles</code></td>
+        <td style="border-bottom:1px solid #EEE;font-size:11px">quantity_input, single_select_plus, tag_select</td></tr>
+        <tr style="background:#FAFAFA"><td style="padding:8px;border-bottom:1px solid #EEE">排泄状況</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">6</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">55</td>
+        <td style="border-bottom:1px solid #EEE"><code>excretion_records</code></td>
+        <td style="border-bottom:1px solid #EEE;font-size:11px">quantity_input, single_select_plus</td></tr>
+        <tr><td style="padding:8px;border-bottom:1px solid #EEE">就労・能力</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">3</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">30</td>
+        <td style="border-bottom:1px solid #EEE"><code>support_charts</code></td>
+        <td style="border-bottom:1px solid #EEE;font-size:11px">single_select_plus</td></tr>
+        <tr style="background:#FAFAFA"><td style="padding:8px;border-bottom:1px solid #EEE">生活動作</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">8</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">79</td>
+        <td style="border-bottom:1px solid #EEE"><code>support_charts (adl_json)</code></td>
+        <td style="border-bottom:1px solid #EEE;font-size:11px">quantity_input, single_select_plus</td></tr>
+        <tr><td style="padding:8px;border-bottom:1px solid #EEE">コミュニケーション</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">2</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">25</td>
+        <td style="border-bottom:1px solid #EEE"><code>support_charts (communication_json)</code></td>
+        <td style="border-bottom:1px solid #EEE;font-size:11px">quantity_input, two_stage</td></tr>
+        <tr style="background:#FAFAFA"><td style="padding:8px;border-bottom:1px solid #EEE">行動状況</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">1</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">7</td>
+        <td style="border-bottom:1px solid #EEE"><code>support_charts (behavior_json)</code></td>
+        <td style="border-bottom:1px solid #EEE;font-size:11px">two_stage</td></tr>
+        <tr><td style="padding:8px;border-bottom:1px solid #EEE">本人・家族の意向・目標</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">4</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">66</td>
+        <td style="border-bottom:1px solid #EEE"><code>support_charts / support_plans</code></td>
+        <td style="border-bottom:1px solid #EEE;font-size:11px">branching_freetext, single_select_plus</td></tr>
+        <tr style="background:#FAFAFA"><td style="padding:8px;border-bottom:1px solid #EEE">支援シート</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">2</td>
+        <td style="text-align:center;border-bottom:1px solid #EEE">88</td>
+        <td style="border-bottom:1px solid #EEE"><code>support_charts (support_sheet_json)</code></td>
+        <td style="border-bottom:1px solid #EEE;font-size:11px">grid_freetext</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:16px;padding:16px;background:#F8F6F0;border-radius:8px;font-size:13px">
+      <strong>統合数値:</strong> 185フィールド / 1,544選択肢（印刷136F+OCR49F）
+    </div>
+  </div>
+
+  <!-- TAB: フロー -->
+  <div id="tab-flow" class="tab-content">
+    <h2 style="font-size:18px;margin-bottom:20px">CareOS 支援カルテ入力フロー全体図</h2>
+    <div style="background:#fff;border-radius:12px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.06)">
+      <div style="text-align:center">
+        <div style="display:inline-block;text-align:left">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+            <div class="flow-box" style="background:#1A1A2E">利用者選択</div>
+            <span class="flow-arrow">&#x2192;</span>
+            <div class="flow-box" style="background:#4A90D9">支援カルテ画面</div>
+            <span class="flow-arrow">&#x2192;</span>
+            <div class="flow-box" style="background:#484237">セクション選択<br><small>(10セクション)</small></div>
+          </div>
+          <div style="margin-left:60px;border-left:3px solid #DDD;padding-left:24px">
+            <div style="margin-bottom:20px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                <span class="level-label l1">L1</span>
+                <strong style="font-size:13px">基本選択（1タップ）</strong>
+              </div>
+              <p style="font-size:12px;color:#888;margin-left:40px">7つのUIパターンから最適なものを自動選択</p>
+            </div>
+            <div style="margin-bottom:20px;position:relative">
+              <div style="position:absolute;left:-27px;top:8px;width:8px;height:8px;border-radius:50%;background:#E67E22"></div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                <span class="level-label l2">L2</span>
+                <strong style="font-size:13px">詳細選択（条件展開 / 複数タップ）</strong>
+              </div>
+              <p style="font-size:12px;color:#888;margin-left:40px">OCR分析で発見した実データパターンから選択肢を提示</p>
+            </div>
+            <div style="margin-bottom:20px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                <span class="level-label l3">L3</span>
+                <strong style="font-size:13px">補足記述（任意 / 音声STT）</strong>
+              </div>
+              <p style="font-size:12px;color:#888;margin-left:40px">全フィールド共通。マイクボタンで音声入力</p>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+            <div class="flow-box" style="background:#27AE60">保存</div>
+            <span class="flow-arrow">&#x2192;</span>
+            <div class="flow-box" style="background:#746558">JSON &#x2192; DB格納</div>
+            <span class="flow-arrow">&#x2192;</span>
+            <div class="flow-box" style="background:#E67E22">AI分析対象</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:32px;padding:20px;background:#F8F6F0;border-radius:8px">
+        <h4 style="font-size:14px;margin-bottom:8px">入力効率の試算</h4>
+        <table style="width:100%;font-size:13px;border-collapse:collapse">
+          <tr><th style="text-align:left;padding:6px;width:50%">項目</th><th style="text-align:right">紙カルテ（従来）</th><th style="text-align:right">CareOS（DX後）</th></tr>
+          <tr style="background:#fff"><td style="padding:6px">1セクション入力時間</td><td style="text-align:right">5-10分</td><td style="text-align:right;color:#27AE60;font-weight:700">1-3分</td></tr>
+          <tr><td style="padding:6px">全10セクション完了</td><td style="text-align:right">60-90分</td><td style="text-align:right;color:#27AE60;font-weight:700">15-25分</td></tr>
+          <tr style="background:#fff"><td style="padding:6px">タップ操作率</td><td style="text-align:right">0%（全手書き）</td><td style="text-align:right;color:#27AE60;font-weight:700">95%+</td></tr>
+          <tr><td style="padding:6px">構造化フィールド</td><td style="text-align:right">0</td><td style="text-align:right;color:#27AE60;font-weight:700">185F / 1,544選択肢</td></tr>
+          <tr style="background:#fff"><td style="padding:6px">AI分析連携</td><td style="text-align:right">不可</td><td style="text-align:right;color:#27AE60;font-weight:700">リアルタイム</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: 6ステップ方法論 -->
+  <div id="tab-method" class="tab-content">
+    <h2 style="font-size:18px;margin-bottom:20px">OCR統合 6ステップ方法論</h2>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">
+      <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-top:4px solid #3498DB">
+        <div style="font-size:28px;font-weight:700;color:#3498DB">Step 1</div>
+        <h4 style="margin:8px 0">PDF全ページ解析</h4>
+        <p style="font-size:13px;color:#666">2,897ページのサイズ測定で192人の利用者境界を自動検出</p>
+      </div>
+      <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-top:4px solid #9B59B6">
+        <div style="font-size:28px;font-weight:700;color:#9B59B6">Step 2</div>
+        <h4 style="margin:8px 0">3バージョン比較</h4>
+        <p style="font-size:13px;color:#666">初期/中期/後期フォーマットを比較し134フィールド/940印刷選択肢を完全抽出</p>
+      </div>
+      <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-top:4px solid #E67E22">
+        <div style="font-size:28px;font-weight:700;color:#E67E22">Step 3</div>
+        <h4 style="margin:8px 0">OCR対象フィールド特定</h4>
+        <p style="font-size:13px;color:#666">47個の自由記述フィールドを特定（Type B: 28件 / Type C: 23件）</p>
+      </div>
+      <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-top:4px solid #E74C3C">
+        <div style="font-size:28px;font-weight:700;color:#E74C3C">Step 4</div>
+        <h4 style="margin:8px 0">ビジュアルOCR</h4>
+        <p style="font-size:13px;color:#666">22ページの手書きデータを視覚的に読み取り（12人分の実データ抽出）</p>
+      </div>
+      <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-top:4px solid #27AE60">
+        <div style="font-size:28px;font-weight:700;color:#27AE60">Step 5</div>
+        <h4 style="margin:8px 0">形態素解析</h4>
+        <p style="font-size:13px;color:#666">janomeで16パターンカテゴリを発見し133提案選択肢を生成</p>
+      </div>
+      <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-top:4px solid #1ABC9C">
+        <div style="font-size:28px;font-weight:700;color:#1ABC9C">Step 6</div>
+        <h4 style="margin:8px 0">UIパターン割当</h4>
+        <p style="font-size:13px;color:#666">全47フィールドを7つのUIパターンに100%マッピング → 567選択肢生成</p>
+      </div>
+    </div>
+
+    <div style="padding:24px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)">
+      <h3 style="font-size:16px;margin-bottom:12px">入力自由度の段階的削減</h3>
+      <div style="display:flex;align-items:center;gap:16px;padding:16px;background:#F8F6F0;border-radius:8px">
+        <div style="text-align:center;flex:1">
+          <div style="font-size:32px;font-weight:700;color:#E74C3C">100%</div>
+          <div style="font-size:12px;color:#666">紙カルテ<br>(全手書き)</div>
+        </div>
+        <div style="font-size:24px;color:#999">&#x2192;</div>
+        <div style="text-align:center;flex:1">
+          <div style="font-size:32px;font-weight:700;color:#E67E22">~5%</div>
+          <div style="font-size:12px;color:#666">分岐UIマスタ<br>(95%+タップ化)</div>
+        </div>
+        <div style="font-size:24px;color:#999">&#x2192;</div>
+        <div style="text-align:center;flex:1">
+          <div style="font-size:32px;font-weight:700;color:#27AE60">~2%</div>
+          <div style="font-size:12px;color:#666">Phase 2<br>(AIサジェスト)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: 支援品質インパクト -->
+  <div id="tab-impact" class="tab-content">
+    <h2 style="font-size:18px;margin-bottom:20px">支援品質への具体的インパクト</h2>
+
+    <div style="margin-bottom:20px;padding:24px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div style="width:40px;height:40px;border-radius:50%;background:#E74C3C;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700">1</div>
+        <div><h3 style="font-size:16px;margin-bottom:2px">パニック対応の標準化</h3>
+        <span class="method-badge" style="background:#E74C3C20;color:#E74C3C">安全管理に直結</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 24px 1fr;gap:12px">
+        <div style="padding:16px;background:#FFF0F0;border-radius:8px">
+          <div style="font-size:12px;font-weight:600;color:#E74C3C;margin-bottom:6px">Before（紙）</div>
+          <p style="font-size:13px;line-height:1.6">「大声を出す」と書くだけ。対応方法は口頭伝達。新人職員は知らないまま現場に出る</p>
+        </div>
+        <div style="display:flex;align-items:center;font-size:20px;color:#999">&#x2192;</div>
+        <div style="padding:16px;background:#F0FFF0;border-radius:8px">
+          <div style="font-size:12px;font-weight:600;color:#27AE60;margin-bottom:6px">After（CareOS）</div>
+          <p style="font-size:13px;line-height:1.6">two_stageパターンで行動+対応を構造化記録。タブレットで即座に確認可能。<strong>引き継ぎミスゼロ</strong></p>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px;padding:24px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div style="width:40px;height:40px;border-radius:50%;background:#E67E22;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700">2</div>
+        <div><h3 style="font-size:16px;margin-bottom:2px">自由記述フィールドのデータ完全化</h3>
+        <span class="method-badge" style="background:#E67E2220;color:#E67E22">OCR分析の核心価値</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 24px 1fr;gap:12px">
+        <div style="padding:16px;background:#FFF5E6;border-radius:8px">
+          <div style="font-size:12px;font-weight:600;color:#E67E22;margin-bottom:6px">Before</div>
+          <p style="font-size:13px;line-height:1.6">面積の広い自由記述カラムが空欄のまま。支援員の質・時間のばらつきで記入されない</p>
+        </div>
+        <div style="display:flex;align-items:center;font-size:20px;color:#999">&#x2192;</div>
+        <div style="padding:16px;background:#F0FFF0;border-radius:8px">
+          <div style="font-size:12px;font-weight:600;color:#27AE60;margin-bottom:6px">After</div>
+          <p style="font-size:13px;line-height:1.6">47フィールドを567選択肢に構造化。<strong>タップするだけで全データが埋まる</strong></p>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px;padding:24px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div style="width:40px;height:40px;border-radius:50%;background:#9B59B6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700">3</div>
+        <div><h3 style="font-size:16px;margin-bottom:2px">マトリックス連携 — 支援の可視化</h3>
+        <span class="method-badge" style="background:#9B59B620;color:#9B59B6">わかるじゃん</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 24px 1fr;gap:12px">
+        <div style="padding:16px;background:#F8F0FF;border-radius:8px">
+          <div style="font-size:12px;font-weight:600;color:#9B59B6;margin-bottom:6px">Before</div>
+          <p style="font-size:13px;line-height:1.6">支援シートの記述がバラバラ。この利用者が13段階のどこにいるか誰も即答できない</p>
+        </div>
+        <div style="display:flex;align-items:center;font-size:20px;color:#999">&#x2192;</div>
+        <div style="padding:16px;background:#F0FFF0;border-radius:8px">
+          <div style="font-size:12px;font-weight:600;color:#27AE60;margin-bottom:6px">After</div>
+          <p style="font-size:13px;line-height:1.6">記録時にmatrix_step自動判定。<strong>13段階x4層で支援進捗が一目で可視化</strong>。危険パスAI検知</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Tab switching
+document.querySelectorAll('.tab').forEach(function(tab) {
+  tab.addEventListener('click', function() {
+    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// Section data from JSON
+var SECTIONS = {
+"cover": {
+"name": "表紙",
+"fields": {
+"主病名": {
+"p": "tag_select",
+"n": 10,
+"cats": [
+"medical_diagnosis"
+],
+"opts": [
+"知的障害",
+"自閉スペクトラム症（ASD）",
+"ダウン症",
+"てんかん",
+"統合失調症",
+"注意欠如多動症（ADHD）",
+"脳性麻痺",
+"アトピー性皮膚炎",
+"喘息",
+"その他（自由記述）"
+]
+},
+"既往歴": {
+"p": "single_select_plus",
+"n": 18,
+"cats": [
+"medical_diagnosis",
+"medication_health"
+],
+"opts": [
+"知的障害",
+"自閉スペクトラム症（ASD）",
+"ダウン症",
+"てんかん",
+"統合失調症",
+"注意欠如多動症（ADHD）",
+"脳性麻痺",
+"アトピー性皮膚炎",
+"喘息",
+"その他（自由記述）",
+"粉薬を食べ物に混ぜて服用（ヨーグルト/プリン/ゼリー等）",
+"粉薬を水・お湯に溶かして服用",
+"錠剤をそのまま服用可能",
+"服薬拒否あり→声かけ・工夫が必要",
+"風邪→肺炎リスクあり要注意"
+]
+},
+"外傷歴": {
+"p": "single_select_plus",
+"n": 8,
+"cats": [
+"medication_health"
+],
+"opts": [
+"粉薬を食べ物に混ぜて服用（ヨーグルト/プリン/ゼリー等）",
+"粉薬を水・お湯に溶かして服用",
+"錠剤をそのまま服用可能",
+"服薬拒否あり→声かけ・工夫が必要",
+"風邪→肺炎リスクあり要注意",
+"てんかん発作あり→見守り必要",
+"アレルギーあり→食事制限必要",
+"その他の健康上の注意（自由記述）"
+]
+},
+"てんかん詳細": {
+"p": "single_select_plus",
+"n": 8,
+"cats": [
+"medication_health"
+],
+"opts": [
+"粉薬を食べ物に混ぜて服用（ヨーグルト/プリン/ゼリー等）",
+"粉薬を水・お湯に溶かして服用",
+"錠剤をそのまま服用可能",
+"服薬拒否あり→声かけ・工夫が必要",
+"風邪→肺炎リスクあり要注意",
+"てんかん発作あり→見守り必要",
+"アレルギーあり→食事制限必要",
+"その他の健康上の注意（自由記述）"
+]
+},
+"1日の過ごし方": {
+"p": "time_schedule",
+"n": 8,
+"cats": [
+"daily_schedule"
+],
+"opts": [
+"施設入所（終日）",
+"通所利用（日中のみ）",
+"ショートステイ（__泊__日、月__回）",
+"日中のスケジュールは施設の日課に準ずる",
+"ヘルパー利用あり（曜日:__）",
+"訪問診療あり（頻度:__）",
+"定期外出あり（曜日:__）",
+"その他（自由記述）"
+]
+},
+"日常生活内容_手書き追記": {
+"p": "time_schedule",
+"n": 17,
+"cats": [
+"daily_schedule",
+"activity_leisure"
+],
+"opts": [
+"施設入所（終日）",
+"通所利用（日中のみ）",
+"ショートステイ（__泊__日、月__回）",
+"日中のスケジュールは施設の日課に準ずる",
+"ヘルパー利用あり（曜日:__）",
+"訪問診療あり（頻度:__）",
+"定期外出あり（曜日:__）",
+"その他（自由記述）",
+"箱折り等の軽作業が得意",
+"シール貼り作業ができる",
+"袋詰め作業ができる",
+"音楽を聴くことが好き",
+"散歩が好き",
+"テレビ・DVD鑑賞が好き",
+"絵を描くことが好き"
+]
+},
+"趣味_手書き追記": {
+"p": "single_select_plus",
+"n": 10,
+"cats": [
+"activity_leisure"
+],
+"opts": [
+"箱折り等の軽作業が得意",
+"シール貼り作業ができる",
+"袋詰め作業ができる",
+"音楽を聴くことが好き",
+"散歩が好き",
+"テレビ・DVD鑑賞が好き",
+"絵を描くことが好き",
+"読書（絵本含む）が好き",
+"特定の作業で集中できる",
+"その他（自由記述）"
+]
+}
+}
+},
+"lifestyle": {
+"name": "生活の様子",
+"fields": {
+"日常生活内容_補足": {
+"p": "time_schedule",
+"n": 8,
+"cats": [
+"daily_schedule"
+],
+"opts": [
+"施設入所（終日）",
+"通所利用（日中のみ）",
+"ショートステイ（__泊__日、月__回）",
+"日中のスケジュールは施設の日課に準ずる",
+"ヘルパー利用あり（曜日:__）",
+"訪問診療あり（頻度:__）",
+"定期外出あり（曜日:__）",
+"その他（自由記述）"
+]
+}
+}
+},
+"meal": {
+"name": "食事・飲食状況",
+"fields": {
+"食事前_手書き追記": {
+"p": "single_select_plus",
+"n": 9,
+"cats": [
+"meal_support"
+],
+"opts": [
+"食堂への移動に時間がかかる→__分前に声かけ",
+"エプロン使用",
+"食事前の手洗い声かけ必要",
+"食べこぼし多い→見守り",
+"食事のペースが速い→声かけで調整",
+"偏食あり→特定食品の代替必要",
+"温かい飲み物を好む",
+"特定のアレルギー・制限食あり",
+"その他（自由記述）"
+]
+},
+"食事中_手書き追記": {
+"p": "single_select_plus",
+"n": 9,
+"cats": [
+"meal_support"
+],
+"opts": [
+"食堂への移動に時間がかかる→__分前に声かけ",
+"エプロン使用",
+"食事前の手洗い声かけ必要",
+"食べこぼし多い→見守り",
+"食事のペースが速い→声かけで調整",
+"偏食あり→特定食品の代替必要",
+"温かい飲み物を好む",
+"特定のアレルギー・制限食あり",
+"その他（自由記述）"
+]
+},
+"食事後_手書き追記": {
+"p": "single_select_plus",
+"n": 9,
+"cats": [
+"meal_support"
+],
+"opts": [
+"食堂への移動に時間がかかる→__分前に声かけ",
+"エプロン使用",
+"食事前の手洗い声かけ必要",
+"食べこぼし多い→見守り",
+"食事のペースが速い→声かけで調整",
+"偏食あり→特定食品の代替必要",
+"温かい飲み物を好む",
+"特定のアレルギー・制限食あり",
+"その他（自由記述）"
+]
+},
+"所要時間": {
+"p": "quantity_input",
+"n": 9,
+"cats": [
+"meal_support"
+],
+"opts": [
+"食堂への移動に時間がかかる→__分前に声かけ",
+"エプロン使用",
+"食事前の手洗い声かけ必要",
+"食べこぼし多い→見守り",
+"食事のペースが速い→声かけで調整",
+"偏食あり→特定食品の代替必要",
+"温かい飲み物を好む",
+"特定のアレルギー・制限食あり",
+"その他（自由記述）"
+]
+},
+"服薬状況": {
+"p": "single_select_plus",
+"n": 8,
+"cats": [
+"medication_health"
+],
+"opts": [
+"粉薬を食べ物に混ぜて服用（ヨーグルト/プリン/ゼリー等）",
+"粉薬を水・お湯に溶かして服用",
+"錠剤をそのまま服用可能",
+"服薬拒否あり→声かけ・工夫が必要",
+"風邪→肺炎リスクあり要注意",
+"てんかん発作あり→見守り必要",
+"アレルギーあり→食事制限必要",
+"その他の健康上の注意（自由記述）"
+]
+},
+"アレルギー_食物詳細": {
+"p": "tag_select",
+"n": 17,
+"cats": [
+"meal_support",
+"medication_health"
+],
+"opts": [
+"食堂への移動に時間がかかる→__分前に声かけ",
+"エプロン使用",
+"食事前の手洗い声かけ必要",
+"食べこぼし多い→見守り",
+"食事のペースが速い→声かけで調整",
+"偏食あり→特定食品の代替必要",
+"温かい飲み物を好む",
+"特定のアレルギー・制限食あり",
+"その他（自由記述）",
+"粉薬を食べ物に混ぜて服用（ヨーグルト/プリン/ゼリー等）",
+"粉薬を水・お湯に溶かして服用",
+"錠剤をそのまま服用可能",
+"服薬拒否あり→声かけ・工夫が必要",
+"風邪→肺炎リスクあり要注意",
+"てんかん発作あり→見守り必要"
+]
+},
+"アレルギー症状_詳細": {
+"p": "single_select_plus",
+"n": 8,
+"cats": [
+"medication_health"
+],
+"opts": [
+"粉薬を食べ物に混ぜて服用（ヨーグルト/プリン/ゼリー等）",
+"粉薬を水・お湯に溶かして服用",
+"錠剤をそのまま服用可能",
+"服薬拒否あり→声かけ・工夫が必要",
+"風邪→肺炎リスクあり要注意",
+"てんかん発作あり→見守り必要",
+"アレルギーあり→食事制限必要",
+"その他の健康上の注意（自由記述）"
+]
+},
+"1日kcal_数値": {
+"p": "quantity_input",
+"n": 9,
+"cats": [
+"meal_support"
+],
+"opts": [
+"食堂への移動に時間がかかる→__分前に声かけ",
+"エプロン使用",
+"食事前の手洗い声かけ必要",
+"食べこぼし多い→見守り",
+"食事のペースが速い→声かけで調整",
+"偏食あり→特定食品の代替必要",
+"温かい飲み物を好む",
+"特定のアレルギー・制限食あり",
+"その他（自由記述）"
+]
+},
+"水分量": {
+"p": "quantity_input",
+"n": 9,
+"cats": [
+"meal_support"
+],
+"opts": [
+"食堂への移動に時間がかかる→__分前に声かけ",
+"エプロン使用",
+"食事前の手洗い声かけ必要",
+"食べこぼし多い→見守り",
+"食事のペースが速い→声かけで調整",
+"偏食あり→特定食品の代替必要",
+"温かい飲み物を好む",
+"特定のアレルギー・制限食あり",
+"その他（自由記述）"
+]
+},
+"嘔吐_前兆": {
+"p": "single_select_plus",
+"n": 8,
+"cats": [
+"medication_health"
+],
+"opts": [
+"粉薬を食べ物に混ぜて服用（ヨーグルト/プリン/ゼリー等）",
+"粉薬を水・お湯に溶かして服用",
+"錠剤をそのまま服用可能",
+"服薬拒否あり→声かけ・工夫が必要",
+"風邪→肺炎リスクあり要注意",
+"てんかん発作あり→見守り必要",
+"アレルギーあり→食事制限必要",
+"その他の健康上の注意（自由記述）"
+]
+},
+"好きな食べ物_手書き": {
+"p": "tag_select",
+"n": 9,
+"cats": [
+"meal_support"
+],
+"opts": [
+"食堂への移動に時間がかかる→__分前に声かけ",
+"エプロン使用",
+"食事前の手洗い声かけ必要",
+"食べこぼし多い→見守り",
+"食事のペースが速い→声かけで調整",
+"偏食あり→特定食品の代替必要",
+"温かい飲み物を好む",
+"特定のアレルギー・制限食あり",
+"その他（自由記述）"
+]
+},
+"嫌いな食べ物_手書き": {
+"p": "tag_select",
+"n": 9,
+"cats": [
+"meal_support"
+],
+"opts": [
+"食堂への移動に時間がかかる→__分前に声かけ",
+"エプロン使用",
+"食事前の手洗い声かけ必要",
+"食べこぼし多い→見守り",
+"食事のペースが速い→声かけで調整",
+"偏食あり→特定食品の代替必要",
+"温かい飲み物を好む",
+"特定のアレルギー・制限食あり",
+"その他（自由記述）"
+]
+},
+"外食_回数予算": {
+"p": "quantity_input",
+"n": 17,
+"cats": [
+"meal_support",
+"family_wish"
+],
+"opts": [
+"食堂への移動に時間がかかる→__分前に声かけ",
+"エプロン使用",
+"食事前の手洗い声かけ必要",
+"食べこぼし多い→見守り",
+"食事のペースが速い→声かけで調整",
+"偏食あり→特定食品の代替必要",
+"温かい飲み物を好む",
+"特定のアレルギー・制限食あり",
+"その他（自由記述）",
+"家族は穏やかに過ごしてほしいと願っている",
+"自立を目指してほしい",
+"家族も高齢化し対応が困難になっている",
+"定期的な面会あり（__回/月）",
+"家族との連絡は電話で定期的に",
+"帰省あり（__回/月・年）"
+]
+}
+}
+},
+"excretion": {
+"name": "排泄状況",
+"fields": {
+"排尿回数": {
+"p": "quantity_input",
+"n": 8,
+"cats": [
+"toileting"
+],
+"opts": [
+"定時声かけ必要（__時間おき）",
+"尿意の訴えが遅い→早めの声かけ",
+"パッド使用あり",
+"夜間定時排泄あり（__時）",
+"トイレ誘導必要",
+"自立排泄可能",
+"失禁時の対応手順あり",
+"その他（自由記述）"
+]
+},
+"定時誘導_時間": {
+"p": "quantity_input",
+"n": 8,
+"cats": [
+"toileting"
+],
+"opts": [
+"定時声かけ必要（__時間おき）",
+"尿意の訴えが遅い→早めの声かけ",
+"パッド使用あり",
+"夜間定時排泄あり（__時）",
+"トイレ誘導必要",
+"自立排泄可能",
+"失禁時の対応手順あり",
+"その他（自由記述）"
+]
+},
+"夜間排泄_時刻": {
+"p": "quantity_input",
+"n": 15,
+"cats": [
+"toileting",
+"sleep_nighttime"
+],
+"opts": [
+"定時声かけ必要（__時間おき）",
+"尿意の訴えが遅い→早めの声かけ",
+"パッド使用あり",
+"夜間定時排泄あり（__時）",
+"トイレ誘導必要",
+"自立排泄可能",
+"失禁時の対応手順あり",
+"その他（自由記述）",
+"就寝時刻__時、起床時刻__時",
+"入眠困難あり→声かけ/見守り必要",
+"夜間覚醒あり",
+"ラジオ/音楽をつけて寝る習慣あり",
+"夕食後〜就寝間の過ごし方に配慮必要",
+"消灯後は静かに入眠",
+"眠剤使用あり"
+]
+},
+"頻尿_回数": {
+"p": "quantity_input",
+"n": 8,
+"cats": [
+"toileting"
+],
+"opts": [
+"定時声かけ必要（__時間おき）",
+"尿意の訴えが遅い→早めの声かけ",
+"パッド使用あり",
+"夜間定時排泄あり（__時）",
+"トイレ誘導必要",
+"自立排泄可能",
+"失禁時の対応手順あり",
+"その他（自由記述）"
+]
+},
+"便器異物_その他": {
+"p": "single_select_plus",
+"n": 8,
+"cats": [
+"toileting"
+],
+"opts": [
+"定時声かけ必要（__時間おき）",
+"尿意の訴えが遅い→早めの声かけ",
+"パッド使用あり",
+"夜間定時排泄あり（__時）",
+"トイレ誘導必要",
+"自立排泄可能",
+"失禁時の対応手順あり",
+"その他（自由記述）"
+]
+},
+"生理_周期日数": {
+"p": "quantity_input",
+"n": 8,
+"cats": [
+"toileting"
+],
+"opts": [
+"定時声かけ必要（__時間おき）",
+"尿意の訴えが遅い→早めの声かけ",
+"パッド使用あり",
+"夜間定時排泄あり（__時）",
+"トイレ誘導必要",
+"自立排泄可能",
+"失禁時の対応手順あり",
+"その他（自由記述）"
+]
+}
+}
+},
+"employment": {
+"name": "就労・能力",
+"fields": {
+"レクレーション_詳細": {
+"p": "single_select_plus",
+"n": 10,
+"cats": [
+"activity_leisure"
+],
+"opts": [
+"箱折り等の軽作業が得意",
+"シール貼り作業ができる",
+"袋詰め作業ができる",
+"音楽を聴くことが好き",
+"散歩が好き",
+"テレビ・DVD鑑賞が好き",
+"絵を描くことが好き",
+"読書（絵本含む）が好き",
+"特定の作業で集中できる",
+"その他（自由記述）"
+]
+},
+"音楽_詳細": {
+"p": "single_select_plus",
+"n": 10,
+"cats": [
+"activity_leisure"
+],
+"opts": [
+"箱折り等の軽作業が得意",
+"シール貼り作業ができる",
+"袋詰め作業ができる",
+"音楽を聴くことが好き",
+"散歩が好き",
+"テレビ・DVD鑑賞が好き",
+"絵を描くことが好き",
+"読書（絵本含む）が好き",
+"特定の作業で集中できる",
+"その他（自由記述）"
+]
+},
+"美術_詳細": {
+"p": "single_select_plus",
+"n": 10,
+"cats": [
+"activity_leisure"
+],
+"opts": [
+"箱折り等の軽作業が得意",
+"シール貼り作業ができる",
+"袋詰め作業ができる",
+"音楽を聴くことが好き",
+"散歩が好き",
+"テレビ・DVD鑑賞が好き",
+"絵を描くことが好き",
+"読書（絵本含む）が好き",
+"特定の作業で集中できる",
+"その他（自由記述）"
+]
+}
+}
+},
+"adl": {
+"name": "生活動作",
+"fields": {
+"歩行_補足": {
+"p": "single_select_plus",
+"n": 8,
+"cats": [
+"dressing"
+],
+"opts": [
+"自立で更衣可能",
+"上衣は自分で脱げる/着れる、下衣は介助必要",
+"上衣の介助が必要",
+"全介助",
+"ボタン・ファスナーは介助必要",
+"靴下の着脱は介助必要",
+"声かけのみで可能",
+"その他（自由記述）"
+]
+},
+"運動_時間": {
+"p": "quantity_input",
+"n": 10,
+"cats": [
+"activity_leisure"
+],
+"opts": [
+"箱折り等の軽作業が得意",
+"シール貼り作業ができる",
+"袋詰め作業ができる",
+"音楽を聴くことが好き",
+"散歩が好き",
+"テレビ・DVD鑑賞が好き",
+"絵を描くことが好き",
+"読書（絵本含む）が好き",
+"特定の作業で集中できる",
+"その他（自由記述）"
+]
+},
+"歯磨き_時間回数": {
+"p": "quantity_input",
+"n": 8,
+"cats": [
+"nose_oral_care"
+],
+"opts": [
+"歯磨き自立",
+"歯磨きの声かけのみ必要",
+"仕上げ磨きの介助必要",
+"歯磨き粉の使用が難しい",
+"鼻をかむことができない→介助必要",
+"鼻水はこよりで対応",
+"うがいができる/できない",
+"その他（自由記述）"
+]
+},
+"入浴_頻度": {
+"p": "quantity_input",
+"n": 10,
+"cats": [
+"bathing"
+],
+"opts": [
+"一般浴可能",
+"シャワー浴のみ",
+"入浴時見守り必要",
+"入浴中の発作リスクあり→常時見守り",
+"シャンプーハット使用",
+"シャワーチェア使用",
+"入浴拒否あり→声かけ工夫必要",
+"洗髪・洗体の一部介助必要",
+"全介助",
+"その他（自由記述）"
+]
+},
+"入浴_手書き": {
+"p": "single_select_plus",
+"n": 10,
+"cats": [
+"bathing"
+],
+"opts": [
+"一般浴可能",
+"シャワー浴のみ",
+"入浴時見守り必要",
+"入浴中の発作リスクあり→常時見守り",
+"シャンプーハット使用",
+"シャワーチェア使用",
+"入浴拒否あり→声かけ工夫必要",
+"洗髪・洗体の一部介助必要",
+"全介助",
+"その他（自由記述）"
+]
+},
+"整髪_手書き": {
+"p": "single_select_plus",
+"n": 8,
+"cats": [
+"dressing"
+],
+"opts": [
+"自立で更衣可能",
+"上衣は自分で脱げる/着れる、下衣は介助必要",
+"上衣の介助が必要",
+"全介助",
+"ボタン・ファスナーは介助必要",
+"靴下の着脱は介助必要",
+"声かけのみで可能",
+"その他（自由記述）"
+]
+},
+"睡眠_時刻": {
+"p": "quantity_input",
+"n": 8,
+"cats": [
+"sleep_nighttime"
+],
+"opts": [
+"就寝時刻__時、起床時刻__時",
+"入眠困難あり→声かけ/見守り必要",
+"夜間覚醒あり",
+"ラジオ/音楽をつけて寝る習慣あり",
+"夕食後〜就寝間の過ごし方に配慮必要",
+"消灯後は静かに入眠",
+"眠剤使用あり",
+"その他（自由記述）"
+]
+},
+"日中の様子_手書き": {
+"p": "single_select_plus",
+"n": 17,
+"cats": [
+"daily_schedule",
+"activity_leisure"
+],
+"opts": [
+"施設入所（終日）",
+"通所利用（日中のみ）",
+"ショートステイ（__泊__日、月__回）",
+"日中のスケジュールは施設の日課に準ずる",
+"ヘルパー利用あり（曜日:__）",
+"訪問診療あり（頻度:__）",
+"定期外出あり（曜日:__）",
+"その他（自由記述）",
+"箱折り等の軽作業が得意",
+"シール貼り作業ができる",
+"袋詰め作業ができる",
+"音楽を聴くことが好き",
+"散歩が好き",
+"テレビ・DVD鑑賞が好き",
+"絵を描くことが好き"
+]
+}
+}
+},
+"communication": {
+"name": "コミュニケーション",
+"fields": {
+"集中力_時間": {
+"p": "quantity_input",
+"n": 9,
+"cats": [
+"communication"
+],
+"opts": [
+"言語でのコミュニケーション可能",
+"単語レベルで意思表示",
+"理解はしているが発語がない/少ない",
+"ジェスチャー・指差しで伝える",
+"こちらから声かけすれば応答する",
+"絵カード・写真を使用",
+"表情で意思を読み取る必要あり",
+"特定の人にのみ話す",
+"その他（自由記述）"
+]
+},
+"注意すべき特質_手書き": {
+"p": "two_stage",
+"n": 16,
+"cats": [
+"panic_behavior",
+"communication"
+],
+"opts": [
+"物を投げる",
+"大声を出す",
+"自傷行為あり",
+"他害行為あり",
+"その場から逃げ出す",
+"泣く・叫ぶ",
+"固まる・動けなくなる",
+"言語でのコミュニケーション可能",
+"単語レベルで意思表示",
+"理解はしているが発語がない/少ない",
+"ジェスチャー・指差しで伝える",
+"こちらから声かけすれば応答する",
+"絵カード・写真を使用",
+"表情で意思を読み取る必要あり",
+"特定の人にのみ話す"
+]
+}
+}
+},
+"behavior": {
+"name": "行動状況",
+"fields": {
+"行動_手書き補足": {
+"p": "two_stage",
+"n": 7,
+"cats": [
+"panic_behavior"
+],
+"opts": [
+"物を投げる",
+"大声を出す",
+"自傷行為あり",
+"他害行為あり",
+"その場から逃げ出す",
+"泣く・叫ぶ",
+"固まる・動けなくなる"
+]
+},
+"ルーティン（習慣化した行動）": {
+"p": "single_select_plus",
+"n": 8,
+"cats": [
+"daily_routine"
+],
+"opts": [
+"有",
+"無",
+"毎日決まった買い物をする",
+"特定のルートで移動する",
+"特定の場所に座る",
+"食事前の儀式的行動",
+"就寝前の一連の行動",
+"収集行為（特定の物を集める）",
+"特定の時間に特定の行動をする",
+"繰り返し確認する行動"
+],
+"discovery_note": "サンライズ2.pdf精読で発見。12人中7人以上に記載。Section 11標準フィールド"
+},
+"確認行為": {
+"p": "single_select_plus",
+"n": 6,
+"cats": [
+"daily_routine"
+],
+"opts": [
+"有",
+"無",
+"頻繁",
+"興味のあることのみ",
+"答えを要求する",
+"答えを要求しない"
+],
+"discovery_note": "サンライズ2.pdf精読で発見。Section 11印刷選択肢。確認行為の頻度・質を4段階で記録"
+}
+}
+}
+},
+"goals": {
+"name": "本人・家族の意向・目標",
+"fields": {
+"短期目標": {
+"p": "single_select_plus",
+"n": 13,
+"cats": [
+"daily_life_wish",
+"independence"
+],
+"opts": [
+"穏やかに安心して過ごしてほしい",
+"楽しく毎日を過ごせるように",
+"自分のペースで生活したい",
+"健康で元気に過ごしてほしい",
+"笑顔で過ごせる日が増えてほしい",
+"安全に生活できることが第一",
+"その他（自由記述）",
+"自立した生活ができるようになってほしい",
+"グループホーム（GH）を目指している",
+"親離れして自分で生活できるようになってほしい",
+"他の人との関わりを増やしてほしい",
+"自宅以外の場所で生活することに慣れたい",
+"一人でできることを増やしたい"
+]
+},
+"中期目標": {
+"p": "single_select_plus",
+"n": 13,
+"cats": [
+"daily_life_wish",
+"independence"
+],
+"opts": [
+"穏やかに安心して過ごしてほしい",
+"楽しく毎日を過ごせるように",
+"自分のペースで生活したい",
+"健康で元気に過ごしてほしい",
+"笑顔で過ごせる日が増えてほしい",
+"安全に生活できることが第一",
+"その他（自由記述）",
+"自立した生活ができるようになってほしい",
+"グループホーム（GH）を目指している",
+"親離れして自分で生活できるようになってほしい",
+"他の人との関わりを増やしてほしい",
+"自宅以外の場所で生活することに慣れたい",
+"一人でできることを増やしたい"
+]
+},
+"長期目標": {
+"p": "single_select_plus",
+"n": 19,
+"cats": [
+"daily_life_wish",
+"independence",
+"housing_change"
+],
+"opts": [
+"穏やかに安心して過ごしてほしい",
+"楽しく毎日を過ごせるように",
+"自分のペースで生活したい",
+"健康で元気に過ごしてほしい",
+"笑顔で過ごせる日が増えてほしい",
+"安全に生活できることが第一",
+"その他（自由記述）",
+"自立した生活ができるようになってほしい",
+"グループホーム（GH）を目指している",
+"親離れして自分で生活できるようになってほしい",
+"他の人との関わりを増やしてほしい",
+"自宅以外の場所で生活することに慣れたい",
+"一人でできることを増やしたい",
+"グループホームへの移行を希望",
+"現在の住居から別の場所への移行を希望"
+]
+},
+"本人の意向・思い・願い": {
+"p": "branching_freetext",
+"n": 21,
+"cats": [
+"daily_life_wish",
+"independence",
+"family_wish"
+],
+"opts": [
+"穏やかに安心して過ごしてほしい",
+"楽しく毎日を過ごせるように",
+"自分のペースで生活したい",
+"健康で元気に過ごしてほしい",
+"笑顔で過ごせる日が増えてほしい",
+"安全に生活できることが第一",
+"その他（自由記述）",
+"自立した生活ができるようになってほしい",
+"グループホーム（GH）を目指している",
+"親離れして自分で生活できるようになってほしい",
+"他の人との関わりを増やしてほしい",
+"自宅以外の場所で生活することに慣れたい",
+"一人でできることを増やしたい",
+"家族は穏やかに過ごしてほしいと願っている",
+"自立を目指してほしい"
+]
+}
+}
+},
+"support_sheet": {
+"name": "支援シート",
+"fields": {
+"現状_事実": {
+"p": "grid_freetext",
+"n": 48,
+"cats": [
+"meal_support",
+"communication",
+"bathing",
+"toileting",
+"sleep_nighttime",
+"medication_health"
+],
+"opts": [
+"食堂への移動に時間がかかる→__分前に声かけ",
+"エプロン使用",
+"食事前の手洗い声かけ必要",
+"食べこぼし多い→見守り",
+"食事のペースが速い→声かけで調整",
+"偏食あり→特定食品の代替必要",
+"温かい飲み物を好む",
+"特定のアレルギー・制限食あり",
+"その他（自由記述）",
+"言語でのコミュニケーション可能",
+"単語レベルで意思表示",
+"理解はしているが発語がない/少ない",
+"ジェスチャー・指差しで伝える",
+"こちらから声かけすれば応答する",
+"絵カード・写真を使用"
+]
+},
+"対応_留意点_課題": {
+"p": "grid_freetext",
+"n": 40,
+"cats": [
+"panic_behavior",
+"meal_support",
+"bathing",
+"toileting",
+"medication_health"
+],
+"opts": [
+"物を投げる",
+"大声を出す",
+"自傷行為あり",
+"他害行為あり",
+"その場から逃げ出す",
+"泣く・叫ぶ",
+"固まる・動けなくなる",
+"食堂への移動に時間がかかる→__分前に声かけ",
+"エプロン使用",
+"食事前の手洗い声かけ必要",
+"食べこぼし多い→見守り",
+"食事のペースが速い→声かけで調整",
+"偏食あり→特定食品の代替必要",
+"温かい飲み物を好む",
+"特定のアレルギー・制限食あり"
+]
+}
+}
+}
+};
+
+var PMETA = {"single_select_plus": {"icon": "📋", "color": "#9B59B6", "label": "選択肢+自由記述"}, "quantity_input": {"icon": "🔢", "color": "#3498DB", "label": "数値入力"}, "tag_select": {"icon": "🏷", "color": "#E67E22", "label": "タグ選択"}, "time_schedule": {"icon": "⏰", "color": "#2ECC71", "label": "タイムライン"}, "two_stage": {"icon": "🔀", "color": "#E74C3C", "label": "2段階選択"}, "grid_freetext": {"icon": "📊", "color": "#1ABC9C", "label": "グリッド+記述"}, "branching_freetext": {"icon": "🌳", "color": "#8E44AD", "label": "3層分岐"}};
+
+// Render sections
+function renderSections(filter) {
+  var html = '';
+  var filterLower = (filter || '').toLowerCase();
+  for (var sk in SECTIONS) {
+    var sec = SECTIONS[sk];
+    var fkeys = Object.keys(sec.fields);
+    var filteredKeys = fkeys;
+    if (filterLower) {
+      filteredKeys = fkeys.filter(function(fname) {
+        var f = sec.fields[fname];
+        return fname.toLowerCase().indexOf(filterLower) >= 0 ||
+               (f.cats && f.cats.join(' ').toLowerCase().indexOf(filterLower) >= 0) ||
+               f.p.toLowerCase().indexOf(filterLower) >= 0;
+      });
+      if (filteredKeys.length === 0) return;
+    }
+
+    html += '<div class="section' + (filterLower ? ' open' : '') + '">';
+    html += '<div class="section-header" onclick="toggleSection(this)"><h3>' + sec.name + '</h3><div><span class="count">' + filteredKeys.length + 'F</span> <span class="arrow">&#x25BC;</span></div></div>';
+    html += '<div class="section-body"' + (filterLower ? ' style="display:block"' : '') + '>';
+    filteredKeys.forEach(function(fname) {
+      var f = sec.fields[fname];
+      var meta = PMETA[f.p] || {icon:'?',color:'#999',label:f.p};
+      html += '<div class="field-card">';
+      html += '<div class="field-head" onclick="toggleField(this)">';
+      html += '<div class="icon" style="background:' + meta.color + '">' + meta.icon + '</div>';
+      html += '<div class="fname">' + fname + '</div>';
+      html += '<div class="meta">' + meta.label + ' (' + f.n + ')</div>';
+      html += '</div>';
+      html += '<div class="field-detail">';
+      html += '<p style="font-size:13px;color:#666;margin-bottom:8px">UIパターン: <strong>' + f.p + '</strong> | 選択肢数: ' + f.n + '</p>';
+      if (f.cats && f.cats.length) {
+        html += '<p style="font-size:12px;color:#888;margin-bottom:8px">カテゴリ: ' + f.cats.join(', ') + '</p>';
+      }
+      if (f.opts && f.opts.length) {
+        html += '<div style="display:flex;flex-wrap:wrap;gap:4px">';
+        f.opts.forEach(function(opt) {
+          html += '<span class="chip" style="cursor:default;font-size:11px;padding:3px 10px">' + opt + '</span>';
+        });
+        if (f.n > f.opts.length) {
+          html += '<span class="chip" style="cursor:default;font-size:11px;padding:3px 10px;background:#F0F4FF;color:#4A90D9">+' + (f.n - f.opts.length) + '</span>';
+        }
+        html += '</div>';
+      }
+      html += '</div></div>';
+    });
+    html += '</div></div>';
+  }
+  document.getElementById('sections-container').innerHTML = html || '<p style="text-align:center;color:#888;padding:40px">該当するフィールドがありません</p>';
+}
+
+function filterFields(val) { renderSections(val); }
+function toggleSection(el) { el.parentElement.classList.toggle('open'); }
+function toggleField(el) { el.parentElement.classList.toggle('open'); }
+function toggleChip(el) { el.classList.toggle('selected'); updateDemoResult(); }
+
+function demoL1(el, val) {
+  el.parentElement.querySelectorAll('.radio-opt').forEach(function(r) { r.classList.remove('selected'); });
+  el.classList.add('selected');
+  document.getElementById('demo-l2-wrap').style.display = val === 'その他' ? 'block' : 'none';
+  if (val === '自立') {
+    document.querySelectorAll('#demo-l2 .chip').forEach(function(c) { c.classList.remove('selected'); });
+  }
+  updateDemoResult();
+}
+
+function updateDemoResult() {
+  var l1El = document.querySelector('#demo-l1 .radio-opt.selected');
+  if (!l1El) { document.getElementById('demo-result').style.display = 'none'; return; }
+  var l1 = l1El.textContent;
+  var l2 = [];
+  document.querySelectorAll('#demo-l2 .chip.selected').forEach(function(c) { l2.push(c.textContent); });
+  var l3 = document.getElementById('demo-l3').value;
+  var obj = {level1: l1, level2: l2, level3: l3 || ''};
+  document.getElementById('demo-result').style.display = 'block';
+  document.getElementById('demo-json').textContent = JSON.stringify(obj, null, 2);
+}
+
+function demoVoice() { alert('音声入力はPhase 1実装時にWeb Speech API / Whisperで提供予定'); }
+
+// Init
+renderSections();
+</script>
+</body>
+</html>
