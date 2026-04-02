@@ -573,9 +573,12 @@ var DRIVE_FOLDER_MAP = {
   '07_参考資料/最新資料/': '1w2sA53C3QhWh8-bqYfThLivUoVTj9VeY',
   '08_その他業務/': '11alQydLxcly78teSxZf4gO73dZYvDcqm'
 };
-function getDriveUrl(doc){
-  var base = doc.name.replace(/\.[^.]+$/, '');
-  return 'https://drive.google.com/drive/search?q=' + encodeURIComponent(base);
+function getDocUrl(doc){
+  var LARGE_FILES = {'Universal-Care-OS_JV合意版_v11_final.pptx': true};
+  if(LARGE_FILES[doc.name]){
+    return 'https://drive.google.com/drive/search?q=' + encodeURIComponent(doc.name.replace(/\.[^.]+$/, ''));
+  }
+  return 'https://github.com/nagayamats-rgb/careos-gantt/blob/main/docs/' + encodeURIComponent(doc.path) + encodeURIComponent(doc.name);
 }
 
 // ========== DOC PANEL ==========
@@ -588,7 +591,7 @@ function showDocPanel(task){
       var ext = doc.name.split('.').pop().toLowerCase();
       var icon = ext==='pdf'?'PDF':ext==='docx'?'DOC':ext==='pptx'?'PPT':ext==='xlsx'?'XLS':ext==='html'?'HTML':ext==='md'?'MD':'FILE';
       var iconColor = ext==='pdf'?'#E74C3C':ext==='docx'?'#2980B9':ext==='pptx'?'#E67E22':ext==='xlsx'?'#27AE60':ext==='html'?'#8E44AD':'#888';
-      var driveUrl = getDriveUrl(doc); html += '<a href="' + driveUrl + '" target="_blank" class="doc-item" style="text-decoration:none;color:inherit;cursor:pointer">';
+      var driveUrl = getDocUrl(doc); html += '<a href="' + driveUrl + '" target="_blank" class="doc-item" style="text-decoration:none;color:inherit;cursor:pointer">';
       html += '<div class="doc-icon" style="color:'+iconColor+';font-weight:700;font-size:11px;background:'+iconColor+'15;padding:2px 4px;border-radius:3px">'+icon+'</div>';
       html += '<div class="doc-info">';
       html += '<div class="doc-name" style="color:#0071e3">'+doc.name+'</div>';
@@ -769,7 +772,7 @@ document.addEventListener('mousemove', function(ev){
   html += '<div class="tt-date">ステータス: '+statusLabel+'</div>';
   if(t.note) html += '<div class="tt-note">'+t.note+'</div>';
   if(t.docs && t.docs.length > 0){
-    html += '<div class="tt-docs">参照(Google Drive): ';
+    html += '<div class="tt-docs">参照: ';
     t.docs.forEach(function(doc,i){
       if(i>0) html += ', ';
       html += doc.name;
