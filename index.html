@@ -560,6 +560,27 @@ function renderLegend(){
   document.getElementById('legendBar').innerHTML = html;
 }
 
+
+// ========== GOOGLE DRIVE LINK RESOLVER ==========
+var DRIVE_FOLDER_MAP = {
+  'ハンズオン支援/': '1fTUQaEBUo3DKDMzuju3s2uGnfOU_KnjA',
+  '01_提案書/': '1RvYZXGvuW2a8HFZc3fu5icy7jds7R8FU',
+  '02_報告書/': '17zCJUYgVYHTzSc2P4I8Q4xSxPXp5PXiD',
+  '03_開発ドキュメント/': '1UF9uA77_me1j9XgAPBtnWgu5HZs8E9Hw',
+  '04_契約・法務/': '1jptLeyVmZNEE_QX9Cm1ow93_Hiu7MVGB',
+  '05_研修/': '1bNrIJYyJx-Wtnkg1rW4R74wxE-hEYKTo',
+  '07_参考資料/': '1JCPncFwRVcerhegf6Ca0_ika4hVjdEG9',
+  '07_参考資料/最新資料/': '1w2sA53C3QhWh8-bqYfThLivUoVTj9VeY',
+  '08_その他業務/': '11alQydLxcly78teSxZf4gO73dZYvDcqm'
+};
+function getDriveUrl(doc){
+  var folderId = DRIVE_FOLDER_MAP[doc.path];
+  if(folderId){
+    return 'https://drive.google.com/drive/folders/' + folderId + '?q=' + encodeURIComponent(doc.name);
+  }
+  return 'https://drive.google.com/drive/folders/18CWzjfAGg83j8OKL17vv6CKK4bWBKGj_?q=' + encodeURIComponent(doc.name);
+}
+
 // ========== DOC PANEL ==========
 function showDocPanel(task){
   var panel = document.getElementById('docPanel');
@@ -570,13 +591,13 @@ function showDocPanel(task){
       var ext = doc.name.split('.').pop().toLowerCase();
       var icon = ext==='pdf'?'PDF':ext==='docx'?'DOC':ext==='pptx'?'PPT':ext==='xlsx'?'XLS':ext==='html'?'HTML':ext==='md'?'MD':'FILE';
       var iconColor = ext==='pdf'?'#E74C3C':ext==='docx'?'#2980B9':ext==='pptx'?'#E67E22':ext==='xlsx'?'#27AE60':ext==='html'?'#8E44AD':'#888';
-      html += '<div class="doc-item">';
+      var driveUrl = getDriveUrl(doc); html += '<a href="' + driveUrl + '" target="_blank" class="doc-item" style="text-decoration:none;color:inherit;cursor:pointer">';
       html += '<div class="doc-icon" style="color:'+iconColor+';font-weight:700;font-size:11px;background:'+iconColor+'15;padding:2px 4px;border-radius:3px">'+icon+'</div>';
       html += '<div class="doc-info">';
-      html += '<div class="doc-name">'+doc.name+'</div>';
-      html += '<div class="doc-path">'+doc.path+doc.name+'</div>';
+      html += '<div class="doc-name" style="color:#0071e3">'+doc.name+'</div>';
+      html += '<div class="doc-path">Google Drive / '+doc.path+doc.name+'</div>';
       if(doc.desc) html += '<div class="doc-desc">'+doc.desc+'</div>';
-      html += '</div></div>';
+      html += '</div></a>';
     });
   } else {
     html += '<div style="color:var(--muted);font-size:12px;padding:8px">関連ドキュメントなし</div>';
@@ -751,7 +772,7 @@ document.addEventListener('mousemove', function(ev){
   html += '<div class="tt-date">ステータス: '+statusLabel+'</div>';
   if(t.note) html += '<div class="tt-note">'+t.note+'</div>';
   if(t.docs && t.docs.length > 0){
-    html += '<div class="tt-docs">参照: ';
+    html += '<div class="tt-docs">参照(Google Drive): ';
     t.docs.forEach(function(doc,i){
       if(i>0) html += ', ';
       html += doc.name;
