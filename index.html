@@ -578,7 +578,9 @@ function getDocUrl(doc){
   if(LARGE_FILES[doc.name]){
     return 'https://drive.google.com/drive/search?q=' + encodeURIComponent(doc.name.replace(/\.[^.]+$/, ''));
   }
-  return 'https://github.com/nagayamats-rgb/careos-gantt/blob/main/docs/' + encodeURIComponent(doc.path) + encodeURIComponent(doc.name);
+  var parts = doc.path.split('/').filter(function(p){return p;});
+  var encodedPath = parts.map(function(p){return encodeURIComponent(p)}).join('/');
+  return 'https://github.com/nagayamats-rgb/careos-gantt/blob/main/docs/' + encodedPath + '/' + encodeURIComponent(doc.name);
 }
 
 // ========== DOC PANEL ==========
