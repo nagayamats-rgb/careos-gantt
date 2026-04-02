@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Universal Care OS — タスク管理 &amp; ガントチャート（4/16ハンズオン対応版）</title>
+<style>
+:root {
+  --navy: #1A1A2E;
+  --primary: #4A90D9;
+  --success: #27AE60;
+  --warning: #F39C12;
+  --danger: #E74C3C;
+  --bg: #F5F7FA;
+  --card-bg: #FFFFFF;
+  --brown: #484237;
+  --cream: #EEE8DD;
+  --text: #333;
+  --muted: #888;
+  --border: #E0E0E0;
+  --p1: #E74C3C;
+  --p2: #F39C12;
+  --p3: #3498DB;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: "Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.6;
+}
+.header {
+  background: linear-gradient(135deg, var(--navy), #2D2D5E);
+  color: #fff; padding: 24px 32px; position: sticky; top:0; z-index:100;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+}
+.header h1 { font-size: 22px; font-weight: 600; }
+.header .sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-top:4px; }
+.header .deadline-banner {
+  margin-top:8px; padding:6px 14px; background:rgba(231,76,60,0.25);
+  border:1px solid rgba(231,76,60,0.6); border-radius:8px; font-size:13px;
+  display:inline-block;
+}
+.header .deadline-banner strong { color:#FF6B6B; }
+.controls {
+  display:flex; gap:12px; align-items:center; margin-top:12px; flex-wrap:wrap;
+}
+.controls button {
+  padding: 6px 16px; border-radius:6px; border:1px solid rgba(255,255,255,0.3);
+  background: transparent; color:#fff; cursor:pointer; font-size:13px;
+  transition: all .2s;
+}
+.controls button:hover, .controls button.active {
+  background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.6);
+}
+.controls button.active { background: var(--primary); border-color: var(--primary); }
+.today-marker { font-size:12px; background:var(--danger); padding:3px 10px; border-radius:12px; }
+.main { display:flex; max-width:100%; overflow:hidden; }
+.sidebar {
+  width: 520px; min-width: 520px; background: var(--card-bg);
+  border-right: 1px solid var(--border); overflow-y:auto;
+  height: calc(100vh - 140px);
+}
+.chart-area {
+  flex:1; overflow-x:auto; overflow-y:auto;
+  height: calc(100vh - 140px);
+}
+/* Sidebar task list */
+.cat-header {
+  padding: 10px 16px; font-size: 13px; font-weight:600;
+  background: var(--cream); color: var(--brown); border-bottom:1px solid var(--border);
+  position:sticky; top:0; z-index:2; cursor:pointer; user-select:none;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.cat-header .badge {
+  font-size:11px; padding:2px 8px; border-radius:10px; color:#fff; font-weight:500;
+}
+.task-row {
+  display:grid; grid-template-columns: 10px 42px 1fr 60px 80px;
+  align-items:center; padding:7px 12px; border-bottom:1px solid #f0f0f0;
+  font-size:12px; min-height:40px; transition: background .15s; gap:6px;
+  cursor:pointer;
+}
+.task-row:hover { background:#f0f4ff; }
+.task-row .status-dot {
+  width:8px; height:8px; border-radius:50%; flex-shrink:0;
+}
+.task-row .priority-badge {
+  font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px;
+  color:#fff; text-align:center; white-space:nowrap;
+}
+.task-row .task-name { font-size:12px; line-height:1.3; }
+.task-row .task-deps { font-size:10px; color:#999; }
+.task-row .task-date { color: var(--muted); font-size:11px; white-space:nowrap; text-align:right; }
+.task-row .task-docs-count { font-size:10px; color:var(--primary); text-align:center; cursor:pointer; }
+.task-row.urgent { background: #FFF5F5; }
+.task-row.urgent .task-name { color: var(--danger); font-weight:500; }
+.dot-done { background: var(--success); }
+.dot-progress { background: var(--primary); }
+.dot-pending { background: var(--border); }
+.dot-urgent { background: var(--danger); animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+.priority-p1 { background: var(--p1); }
+.priority-p2 { background: var(--p2); }
+.priority-p3 { background: var(--p3); }
+
+/* Doc panel */
+.doc-panel {
+  display:none; position:fixed; right:20px; top:160px; width:400px; max-height:70vh;
+  background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.2);
+  z-index:300; overflow-y:auto; border:1px solid var(--border);
+}
+.doc-panel.show { display:block; }
+.doc-panel-header {
+  padding:14px 18px; background:var(--navy); color:#fff; font-size:14px;
+  font-weight:600; border-radius:12px 12px 0 0; display:flex;
+  justify-content:space-between; align-items:center;
+}
+.doc-panel-close { cursor:pointer; font-size:18px; opacity:0.7; }
+.doc-panel-close:hover { opacity:1; }
+.doc-panel-body { padding:12px 18px; }
+.doc-item {
+  padding:8px 10px; margin-bottom:6px; background:var(--bg); border-radius:8px;
+  font-size:12px; display:flex; gap:8px; align-items:flex-start;
+}
+.doc-item .doc-icon { font-size:16px; flex-shrink:0; margin-top:1px; }
+.doc-item .doc-info { flex:1; }
+.doc-item .doc-name { font-weight:600; color:var(--text); }
+.doc-item .doc-path { color:var(--muted); font-size:10px; margin-top:2px; word-break:break-all; }
+.doc-item .doc-desc { color:#555; font-size:11px; margin-top:2px; }
+.dep-info { padding:10px; background:#FFF8E1; border-radius:8px; margin-top:8px; font-size:11px; }
+.dep-info strong { color:var(--warning); }
+
+/* Gantt chart */
+.gantt-container { position:relative; min-width:1200px; }
+.gantt-header {
+  display:flex; position:sticky; top:0; z-index:3; background:#fff;
+  border-bottom:2px solid var(--border);
+}
+.gantt-month {
+  text-align:center; font-size:12px; font-weight:600; padding:8px 0;
+  border-right:1px solid var(--border); color: var(--brown);
+}
+.gantt-body { position:relative; }
+.gantt-row {
+  display:flex; align-items:center; height:40px; border-bottom:1px solid #f5f5f5;
+  position:relative;
+}
+.gantt-row:hover { background: rgba(74,144,217,0.04); }
+.gantt-bar {
+  position:absolute; height:22px; border-radius:4px; top:9px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:10px; color:#fff; font-weight:500; cursor:pointer;
+  transition: filter .2s; min-width:6px;
+}
+.gantt-bar:hover { filter: brightness(1.15); z-index:5; }
+.gantt-bar .bar-label {
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 6px;
+}
+.gantt-milestone {
+  position:absolute; top:10px; width:18px; height:18px; transform:rotate(45deg);
+  border-radius:3px; cursor:pointer; transition: filter .2s;
+}
+.gantt-milestone:hover { filter:brightness(1.15); z-index:5; }
+.deadline-line {
+  position:absolute; top:0; bottom:0; width:2px; z-index:4; pointer-events:none;
+}
+.deadline-label {
+  position:absolute; top:-2px; font-size:9px; font-weight:700;
+  white-space:nowrap; transform:translateX(-50%); padding:1px 5px;
+  border-radius:3px; color:#fff;
+}
+.today-line { background:var(--primary); }
+.today-label { background:var(--primary); }
+.dl-0410 { background:#FF6B6B; }
+.dl-0410-label { background:#FF6B6B; }
+.dl-0416 { background:#E74C3C; }
+.dl-0416-label { background:#E74C3C; }
+/* Weekend stripes */
+.weekend-stripe {
+  position:absolute; top:0; bottom:0; background:rgba(0,0,0,0.02);
+  pointer-events:none;
+}
+.month-line {
+  position:absolute; top:0; bottom:0; width:1px; background:var(--border);
+  pointer-events:none;
+}
+/* Tooltip */
+.tooltip {
+  display:none; position:fixed; background:#333; color:#fff; padding:12px 16px;
+  border-radius:8px; font-size:12px; max-width:380px; z-index:200;
+  box-shadow:0 4px 20px rgba(0,0,0,0.3); pointer-events:none; line-height:1.5;
+}
+.tooltip .tt-title { font-weight:600; margin-bottom:4px; font-size:13px; }
+.tooltip .tt-date { color:rgba(255,255,255,0.7); }
+.tooltip .tt-note { margin-top:4px; color:rgba(255,255,255,0.85); font-size:11px; }
+.tooltip .tt-docs { margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.2); font-size:10px; color:rgba(255,255,255,0.7); }
+.tooltip .tt-pri { display:inline-block; padding:1px 6px; border-radius:3px; color:#fff; font-size:10px; font-weight:700; margin-left:6px; }
+/* Summary cards */
+.summary {
+  display:flex; gap:16px; padding:14px 24px; flex-wrap:wrap;
+  border-bottom:1px solid var(--border); background:#fff;
+}
+.summary-card {
+  flex:1; min-width:120px; padding:10px 14px; border-radius:10px;
+  background: var(--bg); text-align:center;
+}
+.summary-card .num { font-size:26px; font-weight:700; }
+.summary-card .label { font-size:11px; color:var(--muted); margin-top:2px; }
+/* Legend */
+.legend { display:flex; gap:16px; padding:6px 24px; font-size:11px; color:var(--muted); flex-wrap:wrap; border-bottom:1px solid var(--border); background:#fff; }
+.legend-item { display:flex; align-items:center; gap:4px; }
+.legend-dot { width:10px; height:10px; border-radius:3px; }
+.filter-tab { font-size:12px !important; }
+
+/* Glossary panel */
+.glossary {
+  background:#fff; padding:16px 24px; border-bottom:1px solid var(--border);
+  font-size:12px; display:none;
+}
+.glossary.show { display:block; }
+.glossary h3 { font-size:14px; margin-bottom:8px; color:var(--navy); }
+.glossary-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:8px; }
+.glossary-item { background:var(--bg); padding:8px 12px; border-radius:6px; }
+.glossary-item strong { color:var(--brown); }
+.glossary-item .desc { color:var(--muted); font-size:11px; }
+
+/* Priority legend */
+.priority-legend { display:flex; gap:12px; padding:6px 24px; font-size:11px; background:#fff; border-bottom:1px solid var(--border); }
+.pri-item { display:flex; align-items:center; gap:4px; }
+.pri-dot { width:18px; height:14px; border-radius:3px; color:#fff; font-size:9px; font-weight:700; text-align:center; line-height:14px; }
+
+@media print {
+  .header { position:relative; }
+  .sidebar { width:50%; min-width:50%; height:auto; overflow:visible; }
+  .chart-area { height:auto; overflow:visible; }
+  .doc-panel { display:none !important; }
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Universal Care OS — タスク管理 &amp; ガントチャート</h1>
+  <div class="sub">CareOS プロジェクト全体スケジュール（2026年4月〜2027年3月）— 4/16 ハンズオン支援対応版</div>
+  <div class="deadline-banner">
+    <strong>4/10(金)</strong> ハンズオン申請予約締切 ／ <strong>4/16(木)</strong> 本申請書提出締切・創業助成締切
+  </div>
+  <div class="controls">
+    <button class="active filter-tab" data-cat="all">すべて</button>
+    <button class="filter-tab" data-cat="jv">A. JV法人設立</button>
+    <button class="filter-tab" data-cat="subsidy">B. 助成金・補助金</button>
+    <button class="filter-tab" data-cat="ip">C. 知財戦略</button>
+    <button class="filter-tab" data-cat="contract">D. 契約</button>
+    <button class="filter-tab" data-cat="dev">E. 開発</button>
+    <button class="filter-tab" data-cat="biz">F. 事業推進</button>
+    <button class="filter-tab" id="glossaryToggle" style="border-color:rgba(255,255,255,0.6)">用語集</button>
+    <span class="today-marker">TODAY: 2026-04-01</span>
+  </div>
+</div>
+
+<div class="glossary" id="glossaryPanel">
+  <h3>関係者・社内用語 一覧</h3>
+  <div class="glossary-grid">
+    <div class="glossary-item"><strong>大野孝徳 社長</strong><div class="desc">サンライズ代表取締役。福祉施設運営のドメインエキスパート。契約条件・事業方針の最終決裁者</div></div>
+    <div class="glossary-item"><strong>立花 翼 さん</strong><div class="desc">サンライズガーデン青葉台 管理者。振興公社との窓口・ハンズオン支援申請の相談役</div></div>
+    <div class="glossary-item"><strong>酒谷信佳 社長</strong><div class="desc">DataBee代表取締役。システム開発パートナー。Phase 2で資本参画予定</div></div>
+    <div class="glossary-item"><strong>藤井議員</strong><div class="desc">DX推進推薦・福祉部局橋渡しの政策連携先。3/23面談済み</div></div>
+    <div class="glossary-item"><strong>ケアネクス</strong><div class="desc">JV法人の社名候補（最有力）。サンライズ75%/FDSi25% → Phase 2でDataBee参画</div></div>
+    <div class="glossary-item"><strong>振興公社</strong><div class="desc">東京都中小企業振興公社。ハンズオン支援・知財助成の申請先</div></div>
+    <div class="glossary-item"><strong>ハンズオン支援</strong><div class="desc">スタートアップ知財戦略ハンズオン支援事業。年10社限定。3年間メンタリング。弁理士・弁護士等の専門家派遣</div></div>
+    <div class="glossary-item"><strong>CareOS / Universal Care OS</strong><div class="desc">知的障害者福祉施設向けSaaS。紙→デジタル化+AI支援+施設間連携</div></div>
+    <div class="glossary-item"><strong>FDSi</strong><div class="desc">有限会社FDSi（永山剛代表）。AI・分析エンジン担当。つよしの会社</div></div>
+    <div class="glossary-item"><strong>DataBee</strong><div class="desc">DataBee株式会社（酒谷信佳代表）。システム開発・みらいえ（不動産SaaS）運営</div></div>
+    <div class="glossary-item"><strong>Track A / Track B</strong><div class="desc">A=JV法人名義申請（ハンズオン・知財助成等）、B=サンライズ直接申請（ICT導入等）</div></div>
+    <div class="glossary-item"><strong>わかるじゃん</strong><div class="desc">サンライズ独自のマトリックス支援手法。行動特性×支援方法の掛け合わせ</div></div>
+  </div>
+</div>
+
+<div class="summary" id="summaryBar"></div>
+<div class="priority-legend">
+  <div class="pri-item"><div class="pri-dot" style="background:var(--p1)">P1</div> 最優先（4/16締切直結）</div>
+  <div class="pri-item"><div class="pri-dot" style="background:var(--p2)">P2</div> 重要（4月中対応）</div>
+  <div class="pri-item"><div class="pri-dot" style="background:var(--p3)">P3</div> 通常（5月以降）</div>
+</div>
+<div class="legend" id="legendBar"></div>
+
+<div class="main">
+  <div class="sidebar" id="sidebar"></div>
+  <div class="chart-area" id="chartArea">
+    <div class="gantt-container" id="ganttContainer"></div>
+  </div>
+</div>
+<div class="tooltip" id="tooltip"></div>
+<div class="doc-panel" id="docPanel">
+  <div class="doc-panel-header">
+    <span id="docPanelTitle">参照ドキュメント</span>
+    <span class="doc-panel-close" id="docPanelClose">&times;</span>
+  </div>
+  <div class="doc-panel-body" id="docPanelBody"></div>
+</div>
+
+<script>
+// ========== DATA ==========
+var TODAY = new Date(2026,3,1);
+var CHART_START = new Date(2026,3,1);
+var CHART_END   = new Date(2027,3,1);
+var DAY_MS = 86400000;
+var TOTAL_DAYS = Math.round((CHART_END - CHART_START) / DAY_MS);
+var DAY_PX = 4;
+var CHART_W = TOTAL_DAYS * DAY_PX;
+var ROW_H = 40;
+
+var DEADLINES = [
+  {date:'2026-04-10', label:'4/10 申請予約締切', cls:'dl-0410'},
+  {date:'2026-04-16', label:'4/16 提出締切', cls:'dl-0416'}
+];
+
+var COLORS = {
+  jv:'#6C5CE7', subsidy:'#00B894', ip:'#FDCB6E',
+  contract:'#E17055', dev:'#0984E3', biz:'#A29BFE'
+};
+var CAT_NAMES = {
+  jv:'A. JV法人設立', subsidy:'B. 助成金・補助金', ip:'C. 知財戦略',
+  contract:'D. 契約', dev:'E. 開発', biz:'F. 事業推進'
+};
+
+var TASKS = [
+  // === A. JV法人設立 ===
+  {id:'jv-1', cat:'jv', name:'JV社名最終決定（ケアネクス）', start:'2026-04-01', end:'2026-04-07', status:'urgent', priority:'P1',
+    note:'ケアテック/コネクシア/ケアネクス 3案から決定。ハンズオン申請書に社名記載必要',
+    deps:[], docs:[
+      {name:'JV社名候補_3案比較.pdf', path:'ハンズオン支援/', desc:'3案のロゴ・コンセプト・比較（5p）'}
+    ]},
+  {id:'jv-2', cat:'jv', name:'定款作成', start:'2026-04-07', end:'2026-04-18', status:'pending', priority:'P2',
+    note:'司法書士依頼。Phase 1: サンライズ75%/FDSi25%',
+    deps:['jv-1'], docs:[]},
+  {id:'jv-3', cat:'jv', name:'公証人認証', start:'2026-04-18', end:'2026-04-25', status:'pending', priority:'P3',
+    note:'電子定款認証', deps:['jv-2'], docs:[]},
+  {id:'jv-4', cat:'jv', name:'法人登記申請', start:'2026-04-25', end:'2026-05-09', status:'pending', priority:'P3',
+    note:'法務局。登記完了まで約2週間', deps:['jv-3'], docs:[]},
+  {id:'jv-5', cat:'jv', name:'法人銀行口座開設', start:'2026-05-09', end:'2026-05-23', status:'pending', priority:'P3',
+    note:'法人登記後。審査約2週間', deps:['jv-4'], docs:[]},
+  {id:'jv-6', cat:'jv', name:'税務届出（税務署・都税）', start:'2026-05-09', end:'2026-05-16', status:'pending', priority:'P3',
+    note:'設立届・青色申告等', deps:['jv-4'], docs:[]},
+  {id:'jv-7', cat:'jv', name:'Phase 2: DataBee増資引受', start:'2027-01-01', end:'2027-03-01', status:'pending', priority:'P3',
+    note:'補助事業完了後→45/40/15体制', deps:[], docs:[]},
+
+  // === B. 助成金・補助金 ===
+  {id:'sub-1', cat:'subsidy', name:'【緊急】ハンズオン支援 申請予約（Google Form）', start:'2026-03-27', end:'2026-04-10', status:'urgent', priority:'P1',
+    note:'振興公社Google Form。年10社限定。4/10(金)締切',
+    milestone:'2026-04-10', deps:[], docs:[
+      {name:'r8_startup_chizai_bosyuuyoukou_1.pdf', path:'ハンズオン支援/', desc:'募集要項（14p）— 申請資格・審査基準・スケジュール'},
+      {name:'r8_startup_chizai_shinseisyo_chuiten_1.pdf', path:'ハンズオン支援/', desc:'申請書記入上の注意点'}
+    ]},
+  {id:'sub-2', cat:'subsidy', name:'【緊急】ハンズオン支援 本申請書作成・提出', start:'2026-04-01', end:'2026-04-16', status:'urgent', priority:'P1',
+    note:'メールまたは郵送。提出後の内容追加・変更不可。17:00締切',
+    milestone:'2026-04-16', deps:['sub-1'], docs:[
+      {name:'r8_startup_chizai_shinseisyo_1.docx', path:'ハンズオン支援/', desc:'申請書テンプレート（振興公社公式）'},
+      {name:'ハンズオン支援_申請書_サンライズ.docx', path:'ハンズオン支援/', desc:'記入済み申請書（サンライズ版）'},
+      {name:'ハンズオン支援_補足説明資料_サンライズ.pptx', path:'ハンズオン支援/', desc:'補足説明資料PPTX'},
+      {name:'r8_startup_chizai_shinseisyo_chuiten_1.pdf', path:'ハンズオン支援/', desc:'記入上の注意点'},
+      {name:'CareOS_先行技術調査報告書_簡易版.docx', path:'ハンズオン支援/', desc:'先行技術調査（特許3件差異分析）'}
+    ]},
+  {id:'sub-3', cat:'subsidy', name:'立花さん振興公社問い合わせ', start:'2026-04-01', end:'2026-04-07', status:'urgent', priority:'P1',
+    note:'線1: サンライズ直接申請可否 / 線2: JV設立前予約→設立後本申請可否',
+    deps:[], docs:[
+      {name:'r8_startup_chizai_bosyuuyoukou_1.pdf', path:'ハンズオン支援/', desc:'募集要項の申請資格欄を確認'}
+    ]},
+  {id:'sub-4', cat:'subsidy', name:'【緊急】創業助成事業 第1回申請', start:'2026-04-07', end:'2026-04-16', status:'urgent', priority:'P1',
+    note:'上限300万（2/3補助）。JV設立前でも申請可能か要確認',
+    milestone:'2026-04-16', deps:['sub-3'], docs:[
+      {name:'CareOS_補助金戦略_2トラック.pptx', path:'07_参考資料/最新資料/', desc:'2トラック戦略（12sl、全制度精査）'},
+      {name:'CareOS_補助金戦略_最適化分析レポート.md', path:'07_参考資料/最新資料/', desc:'補助金戦略分析レポート'}
+    ]},
+  {id:'sub-5', cat:'subsidy', name:'デジタル化・AI導入補助金 1次申請', start:'2026-04-15', end:'2026-05-12', status:'pending', priority:'P2',
+    note:'申請書作成。JV法人名義',
+    milestone:'2026-05-12', deps:['jv-1'], docs:[
+      {name:'CareOS_補助金戦略_2トラック.pptx', path:'07_参考資料/最新資料/', desc:'制度詳細は2トラック戦略S5-S6参照'},
+      {name:'CareOS_助成金補助金ロードマップ.pptx', path:'01_提案書/', desc:'助成金ロードマップ全体（11sl）'}
+    ]},
+  {id:'sub-6', cat:'subsidy', name:'東京都DX推進助成金 情報収集', start:'2026-04-01', end:'2026-05-31', status:'pending', priority:'P2',
+    note:'公募開始時期を監視。最大1,500万（1/2〜3/4）。サンライズ本店が多摩市＝東京都なので申請資格あり',
+    deps:[], docs:[
+      {name:'サンライズDX政策との適合性.pdf', path:'07_参考資料/最新資料/', desc:'政策適合性分析'},
+      {name:'サンライズDX_補助金助成金_拡張版.xlsx', path:'07_参考資料/最新資料/', desc:'補助金一覧Excel'}
+    ]},
+  {id:'sub-7', cat:'subsidy', name:'ICT導入支援事業（厚労省）情報収集', start:'2026-04-01', end:'2026-06-30', status:'pending', priority:'P3',
+    note:'サンライズ直接申請（Track B）。福祉施設向け',
+    deps:[], docs:[
+      {name:'shinjigyou_koubo_2.pdf', path:'07_参考資料/', desc:'新事業公募要項'}
+    ]},
+  {id:'sub-8', cat:'subsidy', name:'ハンズオン支援 面接審査', start:'2026-07-13', end:'2026-07-17', status:'pending', priority:'P3',
+    note:'プレゼン準備必要', milestone:'2026-07-15',
+    deps:['sub-2'], docs:[
+      {name:'Universal-Care-OS_JV合意版_v11_final.pptx', path:'01_提案書/', desc:'事業計画プレゼン（71sl）'}
+    ]},
+  {id:'sub-9', cat:'subsidy', name:'ハンズオン支援 支援開始', start:'2026-10-01', end:'2027-03-31', status:'pending', priority:'P3',
+    note:'3年間メンタリング', milestone:'2026-10-01', deps:['sub-8'], docs:[]},
+  {id:'sub-10', cat:'subsidy', name:'IT導入補助金 申請検討', start:'2026-06-01', end:'2026-07-31', status:'pending', priority:'P3',
+    note:'経産省。JV法人名義', deps:['jv-4'], docs:[]},
+
+  // === C. 知財戦略 ===
+  {id:'ip-1', cat:'ip', name:'弁理士初回面談', start:'2026-04-07', end:'2026-04-14', status:'pending', priority:'P2',
+    note:'打ち合わせ資料・先行技術調査報告書持参',
+    deps:[], docs:[
+      {name:'弁理士打ち合わせ資料_CareOS知財戦略.docx', path:'04_契約・法務/', desc:'8章構成（請求項案・先行技術評価・費用概算）'},
+      {name:'CareOS_先行技術調査報告書_簡易版.docx', path:'04_契約・法務/', desc:'先行技術調査（8p、差異分析テーブル）'},
+      {name:'CareOS_IP戦略_知的財産保護計画.pptx', path:'01_提案書/', desc:'IP戦略PPTX（12sl）'}
+    ]},
+  {id:'ip-2', cat:'ip', name:'特許1: AI虐待予防システム 出願準備', start:'2026-04-14', end:'2026-06-30', status:'pending', priority:'P3',
+    note:'最近接: 産総研AiCAN（児童虐待/テキスト対象≠障害福祉/支援記録）',
+    deps:['ip-1'], docs:[
+      {name:'CareOS_先行技術調査報告書_簡易版.docx', path:'04_契約・法務/', desc:'特許1差異分析'}
+    ]},
+  {id:'ip-3', cat:'ip', name:'特許2: 情報開示×課金連動 出願準備', start:'2026-05-01', end:'2026-07-31', status:'pending', priority:'P3',
+    note:'先行特許なし。特許性高', deps:['ip-1'], docs:[]},
+  {id:'ip-4', cat:'ip', name:'特許3: 分岐入力UI 出願準備', start:'2026-06-01', end:'2026-08-31', status:'pending', priority:'P3',
+    note:'最近接: US10437961B2(DrChrono)だがOCR/形態素解析なし',
+    deps:['ip-1'], docs:[
+      {name:'CareOS_分岐入力UI設計.html', path:'03_開発ドキュメント/', desc:'分岐入力UI設計（185F/1544選択肢）'}
+    ]},
+  {id:'ip-5', cat:'ip', name:'商標出願（4件）', start:'2026-04-14', end:'2026-05-31', status:'pending', priority:'P2',
+    note:'Universal Care OS / CareOS / わかるじゃん / ユニバーサルID',
+    deps:['ip-1','jv-1'], docs:[]},
+  {id:'ip-6', cat:'ip', name:'意匠登録（3件）', start:'2026-06-01', end:'2026-09-30', status:'pending', priority:'P3',
+    note:'タブレット画面・スマホUI・ダッシュボード',
+    deps:['ip-1'], docs:[
+      {name:'Universal_Care_OS_全画面設計v3.html', path:'03_開発ドキュメント/', desc:'全画面ワイヤーフレーム（80画面）'}
+    ]},
+  {id:'ip-7', cat:'ip', name:'知財助成金申請（振興公社）', start:'2026-05-01', end:'2026-06-30', status:'pending', priority:'P3',
+    note:'特許調査費用助成。JV法人名義（Track A優先）',
+    deps:['jv-4'], docs:[
+      {name:'CareOS_補助金戦略_2トラック.pptx', path:'07_参考資料/最新資料/', desc:'知財助成はS11-S12参照'}
+    ]},
+
+  // === D. 契約 ===
+  {id:'con-1', cat:'contract', name:'開発委託契約書 本編 最終化', start:'2026-04-01', end:'2026-04-14', status:'progress', priority:'P2',
+    note:'素案完了(6,000万=2,400万+100万×36)。大野社長レビュー待ち',
+    deps:[], docs:[]},
+  {id:'con-2', cat:'contract', name:'別紙覚書 最終化', start:'2026-04-01', end:'2026-04-14', status:'progress', priority:'P2',
+    note:'全14条。助成金相殺条項含む',
+    deps:[], docs:[]},
+  {id:'con-3', cat:'contract', name:'大野社長 契約協議', start:'2026-04-07', end:'2026-04-21', status:'pending', priority:'P2',
+    note:'契約ご提案書ベースで条件交渉',
+    deps:['con-1','con-2'], docs:[
+      {name:'Universal-Care-OS_JV合意版_v11_final.pptx', path:'01_提案書/', desc:'JV合意書v11（71sl）'}
+    ]},
+  {id:'con-4', cat:'contract', name:'契約締結（JV設立後）', start:'2026-05-09', end:'2026-05-23', status:'pending', priority:'P3',
+    note:'JV法人とDataBee間で正式締結', deps:['jv-4','con-3'], docs:[]},
+  {id:'con-5', cat:'contract', name:'NDA見直し（3社間）', start:'2026-04-14', end:'2026-04-28', status:'pending', priority:'P3',
+    note:'既存DataBee NDAをJV体制に更新',
+    deps:['jv-1'], docs:[]},
+
+  // === E. 開発 ===
+  {id:'dev-1', cat:'dev', name:'お名前.comサーバーデプロイ', start:'2026-04-01', end:'2026-04-14', status:'pending', priority:'P2',
+    note:'PHP 8.x + MySQL。Navi login必要', deps:[], docs:[]},
+  {id:'dev-2', cat:'dev', name:'DB構築: Phase 1コア（8テーブル）', start:'2026-04-14', end:'2026-05-15', status:'pending', priority:'P3',
+    note:'residents, daily_records, vital_records等',
+    deps:['dev-1'], docs:[
+      {name:'フォーマット棚卸し_DB設計_画面設計.xlsx', path:'03_開発ドキュメント/', desc:'DB設計（44テーブル）・画面設計（52画面）'}
+    ]},
+  {id:'dev-3', cat:'dev', name:'API開発: 認証・スコア基盤', start:'2026-05-01', end:'2026-06-15', status:'pending', priority:'P3',
+    note:'auth.php, scores.php, JWT', deps:['dev-2'], docs:[]},
+  {id:'dev-4', cat:'dev', name:'Phase 1 MVP: 記録入力画面', start:'2026-05-15', end:'2026-07-31', status:'pending', priority:'P3',
+    note:'食事・排泄・バイタル・服薬・入浴',
+    deps:['dev-3'], docs:[
+      {name:'Universal_Care_OS_全画面設計v3.html', path:'03_開発ドキュメント/', desc:'全画面ワイヤーフレーム（80画面）'},
+      {name:'CareOS_分岐入力UI設計.html', path:'03_開発ドキュメント/', desc:'分岐入力UI設計'}
+    ]},
+  {id:'dev-5', cat:'dev', name:'Phase 1.5: 保護者ポータル', start:'2026-08-01', end:'2026-09-30', status:'pending', priority:'P3',
+    note:'スマホ40画面。保護者アカウント', deps:['dev-4'], docs:[]},
+  {id:'dev-6', cat:'dev', name:'Phase 1.6: 紙フォーマットデジタル化', start:'2026-09-01', end:'2026-11-30', status:'pending', priority:'P3',
+    note:'支援カルテ・食数管理・就労支援等7テーブル', deps:['dev-4'], docs:[]},
+  {id:'dev-7', cat:'dev', name:'Phase 1.7: マトリックス実装', start:'2026-10-01', end:'2026-12-31', status:'pending', priority:'P3',
+    note:'support_plans, insights等6テーブル', deps:['dev-4'], docs:[]},
+  {id:'dev-8', cat:'dev', name:'Phase 1.8: 定時管理機能', start:'2026-11-01', end:'2027-01-31', status:'pending', priority:'P3',
+    note:'排泄誘導・飲水目標・服薬在庫・生理周期', deps:['dev-4'], docs:[]},
+  {id:'dev-9', cat:'dev', name:'音声入力（STT）基盤実装', start:'2026-06-01', end:'2026-08-31', status:'pending', priority:'P3',
+    note:'Web Speech API / Whisper。Phase 1から', deps:['dev-3'], docs:[]},
+
+  // === F. 事業推進 ===
+  {id:'biz-1', cat:'biz', name:'藤井議員フォローアップ', start:'2026-04-01', end:'2026-04-14', status:'pending', priority:'P2',
+    note:'3/23面談後。DX推進推薦・福祉部局橋渡し依頼',
+    deps:[], docs:[
+      {name:'藤井議員向け_Universal_Care_OS.pptx', path:'01_提案書/', desc:'藤井議員向け資料（21sl）'},
+      {name:'藤井議員面談_プレゼンストーリー_0323.md', path:'01_提案書/', desc:'3/23面談ストーリー'}
+    ]},
+  {id:'biz-2', cat:'biz', name:'杉並区 次ステップ協議', start:'2026-04-14', end:'2026-05-31', status:'pending', priority:'P3',
+    note:'アンケート報告書ベースに次期計画',
+    deps:[], docs:[
+      {name:'杉並区向け_アンケート調査報告書.pptx', path:'02_報告書/', desc:'杉並区向け調査報告書（15sl）'},
+      {name:'アンケート中間報告書.docx', path:'02_報告書/', desc:'中間報告書'}
+    ]},
+  {id:'biz-3', cat:'biz', name:'サンライズ現場トライアル計画', start:'2026-06-01', end:'2026-07-31', status:'pending', priority:'P3',
+    note:'Phase 1種まき（give only）。青葉台+江田', deps:['dev-4'], docs:[]},
+  {id:'biz-4', cat:'biz', name:'Apple Developer登録', start:'2026-04-01', end:'2026-04-14', status:'pending', priority:'P2',
+    note:'年間12,800円。iPad実機テストに必要', deps:[], docs:[]},
+  {id:'biz-5', cat:'biz', name:'サンライズHP改修', start:'2026-04-14', end:'2026-05-31', status:'pending', priority:'P3',
+    note:'改修指示書あり',
+    deps:[], docs:[
+      {name:'サンライズガーデンHP改修指示書.docx', path:'08_その他業務/', desc:'HP改修指示書'}
+    ]},
+  {id:'biz-6', cat:'biz', name:'名刺 校正・発注', start:'2026-04-01', end:'2026-04-14', status:'pending', priority:'P2',
+    note:'校正指示書あり',
+    deps:[], docs:[
+      {name:'名刺_校正指示書.docx', path:'08_その他業務/', desc:'名刺校正指示書'}
+    ]},
+  {id:'biz-7', cat:'biz', name:'NAS協働インフラ構築', start:'2026-04-01', end:'2026-04-07', status:'progress', priority:'P2',
+    note:'QNAP claude-hub共有。CLAUDE.md同期', deps:[], docs:[]}
+];
+
+// ========== HELPERS ==========
+function parseDate(s){ var p=s.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
+function fmtDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtShort(d){ return (d.getMonth()+1)+'/'+d.getDate(); }
+function dayOffset(d){ return Math.round((d - CHART_START)/DAY_MS); }
+function xPos(d){ return dayOffset(d)*DAY_PX; }
+function findTask(id){ for(var i=0;i<TASKS.length;i++){if(TASKS[i].id===id)return TASKS[i];} return null; }
+
+// ========== RENDER SUMMARY ==========
+function renderSummary(tasks){
+  var total=tasks.length, done=0, prog=0, urg=0, p1=0;
+  tasks.forEach(function(t){
+    if(t.status==='done')done++;
+    if(t.status==='progress')prog++;
+    if(t.status==='urgent')urg++;
+    if(t.priority==='P1')p1++;
+  });
+  var pend = total-done-prog-urg;
+  var nextDL = null;
+  tasks.forEach(function(t){
+    if((t.status==='urgent'||t.priority==='P1') && t.milestone){
+      var md = parseDate(t.milestone);
+      if(!nextDL || md < nextDL) nextDL = md;
+    }
+    if((t.status==='urgent'||t.priority==='P1') && !t.milestone){
+      var ed = parseDate(t.end);
+      if(!nextDL || ed < nextDL) nextDL = ed;
+    }
+  });
+  var daysLeft = nextDL ? Math.max(0, Math.round((nextDL - TODAY)/DAY_MS)) : '—';
+  var html = '';
+  html += '<div class="summary-card"><div class="num" style="color:var(--p1)">'+p1+'</div><div class="label">P1 最優先</div></div>';
+  html += '<div class="summary-card"><div class="num" style="color:var(--danger)">'+urg+'</div><div class="label">緊急タスク</div></div>';
+  html += '<div class="summary-card"><div class="num" style="color:var(--primary)">'+prog+'</div><div class="label">進行中</div></div>';
+  html += '<div class="summary-card"><div class="num">'+pend+'</div><div class="label">未着手</div></div>';
+  html += '<div class="summary-card"><div class="num" style="color:var(--success)">'+done+'</div><div class="label">完了</div></div>';
+  html += '<div class="summary-card"><div class="num" style="color:var(--danger)">'+daysLeft+'日</div><div class="label">次のP1締切まで</div></div>';
+  document.getElementById('summaryBar').innerHTML = html;
+}
+
+// ========== RENDER LEGEND ==========
+function renderLegend(){
+  var html = '';
+  for(var k in CAT_NAMES){
+    html += '<div class="legend-item"><div class="legend-dot" style="background:'+COLORS[k]+'"></div>'+CAT_NAMES[k]+'</div>';
+  }
+  html += '<div class="legend-item"><div class="legend-dot" style="background:var(--danger);animation:pulse 1.5s infinite"></div>緊急</div>';
+  html += '<div class="legend-item"><div class="legend-dot" style="background:var(--primary)"></div>進行中</div>';
+  html += '<div class="legend-item"><div class="legend-dot" style="background:var(--border)"></div>未着手</div>';
+  html += '<div class="legend-item"><div class="legend-dot" style="background:var(--success)"></div>完了</div>';
+  document.getElementById('legendBar').innerHTML = html;
+}
+
+// ========== DOC PANEL ==========
+function showDocPanel(task){
+  var panel = document.getElementById('docPanel');
+  document.getElementById('docPanelTitle').textContent = task.name + ' — 参照ドキュメント';
+  var html = '';
+  if(task.docs && task.docs.length > 0){
+    task.docs.forEach(function(doc){
+      var ext = doc.name.split('.').pop().toLowerCase();
+      var icon = ext==='pdf'?'PDF':ext==='docx'?'DOC':ext==='pptx'?'PPT':ext==='xlsx'?'XLS':ext==='html'?'HTML':ext==='md'?'MD':'FILE';
+      var iconColor = ext==='pdf'?'#E74C3C':ext==='docx'?'#2980B9':ext==='pptx'?'#E67E22':ext==='xlsx'?'#27AE60':ext==='html'?'#8E44AD':'#888';
+      html += '<div class="doc-item">';
+      html += '<div class="doc-icon" style="color:'+iconColor+';font-weight:700;font-size:11px;background:'+iconColor+'15;padding:2px 4px;border-radius:3px">'+icon+'</div>';
+      html += '<div class="doc-info">';
+      html += '<div class="doc-name">'+doc.name+'</div>';
+      html += '<div class="doc-path">'+doc.path+doc.name+'</div>';
+      if(doc.desc) html += '<div class="doc-desc">'+doc.desc+'</div>';
+      html += '</div></div>';
+    });
+  } else {
+    html += '<div style="color:var(--muted);font-size:12px;padding:8px">関連ドキュメントなし</div>';
+  }
+  // Dependencies
+  if(task.deps && task.deps.length > 0){
+    html += '<div class="dep-info"><strong>前提タスク:</strong><br>';
+    task.deps.forEach(function(depId){
+      var dep = findTask(depId);
+      if(dep){
+        var statusEmoji = dep.status==='done'?'done':dep.status==='progress'?'progress':dep.status==='urgent'?'urgent':'pending';
+        var statusText = {done:'完了',progress:'進行中',pending:'未着手',urgent:'緊急'}[statusEmoji]||'';
+        html += '- '+dep.name+' ['+statusText+']<br>';
+      }
+    });
+    html += '</div>';
+  }
+  document.getElementById('docPanelBody').innerHTML = html;
+  panel.classList.add('show');
+}
+
+document.getElementById('docPanelClose').addEventListener('click', function(){
+  document.getElementById('docPanel').classList.remove('show');
+});
+
+// ========== RENDER SIDEBAR ==========
+function renderSidebar(tasks){
+  var byCat = {};
+  tasks.forEach(function(t){ if(!byCat[t.cat]) byCat[t.cat] = []; byCat[t.cat].push(t); });
+  var html = '';
+  var catOrder = ['subsidy','jv','ip','contract','dev','biz']; // subsidy first for 4/16 focus
+  catOrder.forEach(function(cat){
+    var list = byCat[cat];
+    if(!list) return;
+    list.sort(function(a,b){
+      var pa = a.priority==='P1'?0:a.priority==='P2'?1:2;
+      var pb = b.priority==='P1'?0:b.priority==='P2'?1:2;
+      if(pa!==pb) return pa-pb;
+      var sa = a.status==='urgent'?0:a.status==='progress'?1:a.status==='pending'?2:3;
+      var sb = b.status==='urgent'?0:b.status==='progress'?1:b.status==='pending'?2:3;
+      if(sa!==sb) return sa-sb;
+      return parseDate(a.start)-parseDate(b.start);
+    });
+    var p1Count = list.filter(function(t){return t.priority==='P1';}).length;
+    html += '<div class="cat-header" data-cat="'+cat+'">';
+    html += '<span>'+CAT_NAMES[cat]+' ('+list.length+')</span>';
+    if(p1Count>0) html += '<span class="badge" style="background:var(--p1)">'+p1Count+' P1</span>';
+    html += '</div>';
+    list.forEach(function(t){
+      var dotClass = t.status==='done'?'dot-done':t.status==='progress'?'dot-progress':t.status==='urgent'?'dot-urgent':'dot-pending';
+      var rowClass = (t.status==='urgent'||t.priority==='P1')?'task-row urgent':'task-row';
+      var ed = parseDate(t.end);
+      var dl = t.milestone ? parseDate(t.milestone) : ed;
+      var daysToEnd = Math.round((dl - TODAY)/DAY_MS);
+      var dateStr = fmtShort(dl);
+      if(daysToEnd <= 0) dateStr += ' (期限切れ)';
+      else if(daysToEnd <= 7) dateStr += ' ('+daysToEnd+'日)';
+      else if(daysToEnd <= 14) dateStr += ' ('+daysToEnd+'日)';
+      var priClass = 'priority-'+t.priority.toLowerCase();
+      var docCount = (t.docs && t.docs.length > 0) ? t.docs.length+'件' : '-';
+      html += '<div class="'+rowClass+'" data-idx="'+TASKS.indexOf(t)+'" onclick="showDocPanel(TASKS['+TASKS.indexOf(t)+'])">';
+      html += '<div class="status-dot '+dotClass+'"></div>';
+      html += '<div class="priority-badge '+priClass+'">'+t.priority+'</div>';
+      html += '<div class="task-name">'+t.name+'</div>';
+      html += '<div class="task-docs-count">'+docCount+'</div>';
+      html += '<div class="task-date">'+dateStr+'</div>';
+      html += '</div>';
+    });
+  });
+  document.getElementById('sidebar').innerHTML = html;
+}
+
+// ========== RENDER GANTT ==========
+function renderGantt(tasks){
+  var container = document.getElementById('ganttContainer');
+  container.style.width = CHART_W + 'px';
+
+  var headerHtml = '';
+  var d = new Date(CHART_START);
+  while(d < CHART_END){
+    var mStart = new Date(d);
+    var mEnd = new Date(d.getFullYear(), d.getMonth()+1, 1);
+    if(mEnd > CHART_END) mEnd = CHART_END;
+    var mDays = Math.round((mEnd - mStart)/DAY_MS);
+    var mW = mDays * DAY_PX;
+    var mLabel = d.getFullYear()+'年'+(d.getMonth()+1)+'月';
+    headerHtml += '<div class="gantt-month" style="width:'+mW+'px">'+mLabel+'</div>';
+    d = mEnd;
+  }
+
+  var bodyHtml = '';
+
+  // Month grid lines
+  d = new Date(CHART_START);
+  while(d < CHART_END){
+    var lx = xPos(d);
+    bodyHtml += '<div class="month-line" style="left:'+lx+'px"></div>';
+    d = new Date(d.getFullYear(), d.getMonth()+1, 1);
+  }
+
+  // Today line
+  var todayX = xPos(TODAY);
+  bodyHtml += '<div class="deadline-line today-line" style="left:'+todayX+'px"></div>';
+  bodyHtml += '<div class="deadline-label today-label" style="left:'+todayX+'px">TODAY</div>';
+
+  // Deadline lines
+  DEADLINES.forEach(function(dl){
+    var dlx = xPos(parseDate(dl.date));
+    bodyHtml += '<div class="deadline-line '+dl.cls+'" style="left:'+dlx+'px"></div>';
+    bodyHtml += '<div class="deadline-label '+dl.cls+'-label" style="left:'+dlx+'px">'+dl.label+'</div>';
+  });
+
+  var rowIdx = 0;
+  var catOrder = ['subsidy','jv','ip','contract','dev','biz'];
+  catOrder.forEach(function(cat){
+    var list = tasks.filter(function(t){return t.cat===cat;});
+    if(list.length===0) return;
+    list.sort(function(a,b){
+      var pa = a.priority==='P1'?0:a.priority==='P2'?1:2;
+      var pb = b.priority==='P1'?0:b.priority==='P2'?1:2;
+      if(pa!==pb) return pa-pb;
+      return parseDate(a.start)-parseDate(b.start);
+    });
+    bodyHtml += '<div class="gantt-row" style="background:'+COLORS[cat]+'08;height:28px"></div>';
+    rowIdx++;
+
+    list.forEach(function(t){
+      var s = parseDate(t.start);
+      var e = parseDate(t.end);
+      var sx = xPos(s);
+      var ex = xPos(e);
+      var w = Math.max(ex - sx, 6);
+      var color = COLORS[t.cat];
+      if(t.priority==='P1') color = '#E74C3C';
+      else if(t.status==='urgent') color = '#E74C3C';
+      else if(t.status==='done') color = '#27AE60';
+      else if(t.status==='progress') color = COLORS[t.cat];
+      var opacity = (t.status==='pending' && t.priority!=='P1' && t.priority!=='P2') ? '0.55' : '1';
+
+      bodyHtml += '<div class="gantt-row">';
+      bodyHtml += '<div class="gantt-bar" style="left:'+sx+'px;width:'+w+'px;background:'+color+';opacity:'+opacity+'" data-idx="'+TASKS.indexOf(t)+'">';
+      if(w > 50) bodyHtml += '<span class="bar-label">'+t.name+'</span>';
+      bodyHtml += '</div>';
+
+      if(t.milestone){
+        var mx = xPos(parseDate(t.milestone)) - 9;
+        bodyHtml += '<div class="gantt-milestone" style="left:'+mx+'px;background:'+color+'" data-idx="'+TASKS.indexOf(t)+'"></div>';
+      }
+      bodyHtml += '</div>';
+      rowIdx++;
+    });
+  });
+
+  container.innerHTML = '<div class="gantt-header">'+headerHtml+'</div><div class="gantt-body" style="height:'+(rowIdx*ROW_H)+'px">'+bodyHtml+'</div>';
+}
+
+// ========== TOOLTIP ==========
+var tooltip = document.getElementById('tooltip');
+document.addEventListener('mousemove', function(ev){
+  var el = ev.target.closest('.gantt-bar,.gantt-milestone');
+  if(!el || el.dataset.idx===undefined){
+    tooltip.style.display='none'; return;
+  }
+  var t = TASKS[+el.dataset.idx];
+  if(!t){ tooltip.style.display='none'; return; }
+  var s = parseDate(t.start), e = parseDate(t.end);
+  var priColor = t.priority==='P1'?'var(--p1)':t.priority==='P2'?'var(--p2)':'var(--p3)';
+  var html = '<div class="tt-title">'+t.name+'<span class="tt-pri" style="background:'+priColor+'">'+t.priority+'</span></div>';
+  html += '<div class="tt-date">'+fmtDate(s)+' 〜 '+fmtDate(e)+'</div>';
+  if(t.milestone) html += '<div class="tt-date" style="color:#FF6B6B">締切: '+t.milestone+'</div>';
+  var statusLabel = {done:'完了',progress:'進行中',pending:'未着手',urgent:'緊急'}[t.status]||'';
+  html += '<div class="tt-date">ステータス: '+statusLabel+'</div>';
+  if(t.note) html += '<div class="tt-note">'+t.note+'</div>';
+  if(t.docs && t.docs.length > 0){
+    html += '<div class="tt-docs">参照: ';
+    t.docs.forEach(function(doc,i){
+      if(i>0) html += ', ';
+      html += doc.name;
+    });
+    html += '</div>';
+  }
+  if(t.deps && t.deps.length > 0){
+    html += '<div class="tt-docs">前提: ';
+    t.deps.forEach(function(depId,i){
+      var dep = findTask(depId);
+      if(dep){if(i>0) html += ', '; html += dep.name;}
+    });
+    html += '</div>';
+  }
+  tooltip.innerHTML = html;
+  tooltip.style.display = 'block';
+  var tx = ev.clientX+12, ty = ev.clientY+12;
+  if(tx + 380 > window.innerWidth) tx = ev.clientX - 390;
+  if(ty + 200 > window.innerHeight) ty = ev.clientY - 210;
+  tooltip.style.left = tx+'px';
+  tooltip.style.top = ty+'px';
+});
+
+// ========== FILTER ==========
+var activeFilter = 'all';
+document.querySelectorAll('.filter-tab').forEach(function(btn){
+  if(btn.id === 'glossaryToggle') return;
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.filter-tab').forEach(function(b){if(b.id!=='glossaryToggle')b.classList.remove('active');});
+    btn.classList.add('active');
+    activeFilter = btn.dataset.cat;
+    renderAll();
+  });
+});
+
+document.getElementById('glossaryToggle').addEventListener('click', function(){
+  var g = document.getElementById('glossaryPanel');
+  g.classList.toggle('show');
+  this.classList.toggle('active');
+});
+
+function getFiltered(){
+  if(activeFilter==='all') return TASKS;
+  return TASKS.filter(function(t){return t.cat===activeFilter;});
+}
+
+function renderAll(){
+  var filtered = getFiltered();
+  renderSummary(filtered);
+  renderSidebar(filtered);
+  renderGantt(filtered);
+}
+
+// ========== INIT ==========
+renderLegend();
+renderAll();
+
+setTimeout(function(){
+  var ca = document.getElementById('chartArea');
+  var tx = xPos(TODAY);
+  ca.scrollLeft = Math.max(0, tx - 100);
+},100);
+</script>
+</body>
+</html>
