@@ -574,7 +574,8 @@ var DRIVE_FOLDER_MAP = {
   '08_その他業務/': '11alQydLxcly78teSxZf4gO73dZYvDcqm'
 };
 function getDriveUrl(doc){
-  return 'https://drive.google.com/drive/search?q=title%3A%22' + encodeURIComponent(doc.name) + '%22';
+  var base = doc.name.replace(/\.[^.]+$/, '');
+  return 'https://drive.google.com/drive/search?q=' + encodeURIComponent(base);
 }
 
 // ========== DOC PANEL ==========
