@@ -571,13 +571,14 @@ function showDocPanel(task){
   if(task.docs && task.docs.length > 0){
     task.docs.forEach(function(doc){
       var ext = doc.name.split('.').pop().toLowerCase();
-      var icon = ext==='pdf'?'PDF':ext==='docx'?'DOC':ext==='pptx'?'PPT':ext==='xlsx'?'XLS':ext==='html'?'HTML':ext==='md'?'MD':'FILE';
-      var iconColor = ext==='pdf'?'#E74C3C':ext==='docx'?'#2980B9':ext==='pptx'?'#E67E22':ext==='xlsx'?'#27AE60':ext==='html'?'#8E44AD':'#888';
+      var dispName = ext==='html' ? doc.name : doc.name.replace(/\.[^.]+$/,'.pdf');
+      var icon = ext==='html' ? 'HTML' : 'PDF';
+      var iconColor = ext==='html' ? '#8E44AD' : '#E74C3C';
       var driveUrl = getDocUrl(doc); html += '<a href="' + driveUrl + '" target="_blank" class="doc-item" style="text-decoration:none;color:inherit;cursor:pointer">';
       html += '<div class="doc-icon" style="color:'+iconColor+';font-weight:700;font-size:11px;background:'+iconColor+'15;padding:2px 4px;border-radius:3px">'+icon+'</div>';
       html += '<div class="doc-info">';
-      html += '<div class="doc-name" style="color:#0071e3">'+doc.name+'</div>';
-      html += '<div class="doc-path">fds.co.jp/sunrise / '+doc.path+doc.name+'</div>';
+      html += '<div class="doc-name" style="color:#0071e3">'+dispName+'</div>';
+      html += '<div class="doc-path">fds.co.jp/sunrise / '+doc.path+dispName+'</div>';
       if(doc.desc) html += '<div class="doc-desc">'+doc.desc+'</div>';
       html += '</div></a>';
     });
