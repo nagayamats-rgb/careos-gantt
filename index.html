@@ -561,19 +561,9 @@ function renderLegend(){
 }
 
 
-// ========== GOOGLE DRIVE LINK RESOLVER ==========
-var DRIVE_FOLDER_MAP = {
-  'ハンズオン支援/': '1fTUQaEBUo3DKDMzuju3s2uGnfOU_KnjA',
-  '01_提案書/': '1RvYZXGvuW2a8HFZc3fu5icy7jds7R8FU',
-  '02_報告書/': '17zCJUYgVYHTzSc2P4I8Q4xSxPXp5PXiD',
-  '03_開発ドキュメント/': '1UF9uA77_me1j9XgAPBtnWgu5HZs8E9Hw',
-  '04_契約・法務/': '1jptLeyVmZNEE_QX9Cm1ow93_Hiu7MVGB',
-  '05_研修/': '1bNrIJYyJx-Wtnkg1rW4R74wxE-hEYKTo',
-  '07_参考資料/': '1JCPncFwRVcerhegf6Ca0_ika4hVjdEG9',
-  '07_参考資料/最新資料/': '1w2sA53C3QhWh8-bqYfThLivUoVTj9VeY',
-  '08_その他業務/': '11alQydLxcly78teSxZf4gO73dZYvDcqm'
-};
-function getDocUrl(doc){  var folderId = DRIVE_FOLDER_MAP[doc.path];  if(folderId){    return 'https://drive.google.com/drive/folders/' + folderId;  }  return 'https://drive.google.com/drive/search?q=' + encodeURIComponent(doc.name.replace(/[.][^.]+$/, ''));}
+// ========== GITHUB DOCUMENT VIEWER ==========
+var GH_BASE='https://github.com/nagayamats-rgb/SUNRISE/blob/master/';
+function getDocUrl(doc){return GH_BASE+doc.path+doc.name;}
 
 // ========== DOC PANEL ==========
 function showDocPanel(task){
@@ -589,7 +579,7 @@ function showDocPanel(task){
       html += '<div class="doc-icon" style="color:'+iconColor+';font-weight:700;font-size:11px;background:'+iconColor+'15;padding:2px 4px;border-radius:3px">'+icon+'</div>';
       html += '<div class="doc-info">';
       html += '<div class="doc-name" style="color:#0071e3">'+doc.name+'</div>';
-      html += '<div class="doc-path">Google Drive / '+doc.path+doc.name+'</div>';
+      html += '<div class="doc-path">GitHub / '+doc.path+doc.name+'</div>';
       if(doc.desc) html += '<div class="doc-desc">'+doc.desc+'</div>';
       html += '</div></a>';
     });
