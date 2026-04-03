@@ -252,7 +252,7 @@ body {
     <button class="filter-tab" data-cat="dev">E. 開発</button>
     <button class="filter-tab" data-cat="biz">F. 事業推進</button>
     <button class="filter-tab" id="glossaryToggle" style="border-color:rgba(255,255,255,0.6)">用語集</button>
-    <span class="today-marker">TODAY: 2026-04-01</span>
+    <span class="today-marker" id="todayMarker">TODAY: ...</span>
   </div>
 </div>
 
@@ -299,7 +299,7 @@ body {
 
 <script>
 // ========== DATA ==========
-var TODAY = new Date(2026,3,1);
+var TODAY = new Date();
 var CHART_START = new Date(2026,3,1);
 var CHART_END   = new Date(2027,3,1);
 var DAY_MS = 86400000;
@@ -573,15 +573,7 @@ var DRIVE_FOLDER_MAP = {
   '07_参考資料/最新資料/': '1w2sA53C3QhWh8-bqYfThLivUoVTj9VeY',
   '08_その他業務/': '11alQydLxcly78teSxZf4gO73dZYvDcqm'
 };
-function getDocUrl(doc){
-  var LARGE_FILES = {'Universal-Care-OS_JV合意版_v11_final.pptx': true};
-  if(LARGE_FILES[doc.name]){
-    return 'https://drive.google.com/drive/search?q=' + encodeURIComponent(doc.name.replace(/\.[^.]+$/, ''));
-  }
-  var parts = doc.path.split('/').filter(function(p){return p;});
-  var encodedPath = parts.map(function(p){return encodeURIComponent(p)}).join('/');
-  return 'https://github.com/nagayamats-rgb/careos-gantt/blob/main/docs/' + encodedPath + '/' + encodeURIComponent(doc.name);
-}
+function getDocUrl(doc){  var folderId = DRIVE_FOLDER_MAP[doc.path];  if(folderId){    return 'https://drive.google.com/drive/folders/' + folderId;  }  return 'https://drive.google.com/drive/search?q=' + encodeURIComponent(doc.name.replace(/[.][^.]+$/, ''));}
 
 // ========== DOC PANEL ==========
 function showDocPanel(task){
@@ -829,6 +821,7 @@ function renderAll(){
 }
 
 // ========== INIT ==========
+document.getElementById('todayMarker').textContent = 'TODAY: ' + fmtDate(TODAY);
 renderLegend();
 renderAll();
 
