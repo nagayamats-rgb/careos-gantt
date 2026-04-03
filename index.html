@@ -561,9 +561,9 @@ function renderLegend(){
 }
 
 
-// ========== GOOGLE DRIVE FILE VIEWER (直接ファイルID) ==========
-var DRIVE_FILE_MAP={'ハンズオン支援/CareOS_先行技術調査報告書_簡易版.docx':'1CdNHMmLLcKHJ_mwa6SfOshpMOr1xApZD','ハンズオン支援/r8_startup_chizai_shinseisyo_1.docx':'1A3ZGr_MGmeZPXlKPZoh2W6R7jJ_WGLa6','ハンズオン支援/r8_startup_chizai_shinseisyo_chuiten_1.pdf':'158BfEPdSp3Co3HEOh-NEeHB0B84QOZ1W','ハンズオン支援/JV社名候補_3案比較.pdf':'1qSEVBSjPqkNbtD0V09dFY-CFJoSPWlue','ハンズオン支援/ハンズオン支援_補足説明資料_サンライズ.pptx':'1Du8YstX_ZbUBjxXDiSXFjZQsW9Z-_7og','ハンズオン支援/ハンズオン支援_申請書_サンライズ.docx':'1pIHohFmZEnsxRYmKLKjfdqtj3m-r6BvB','01_提案書/CareOS_IP戦略_知的財産保護計画.pptx':'1jJWgvRTGyP7Jf-qb0b6WAh2p9-Xez4Zi','01_提案書/CareOS_助成金補助金ロードマップ.pptx':'1_2ZiF9nL4uX8yVeF5dF9asL_3saKag-c','01_提案書/Universal-Care-OS_JV合意版_v11_final.pptx':'1gbdDTKA0FvkWkwCMzd9m0tZiaNm9IyiP','01_提案書/藤井議員向け_Universal_Care_OS.pptx':'1HcZ-_cHLPVvoFscTzqx5K3LVlNbxx9IE','01_提案書/藤井議員面談_プレゼンストーリー_0323.md':'1ElUf_GkwmK_BgYvTpQjFPbqs1gwkvI2_','02_報告書/アンケート中間報告書.docx':'1zGQe2nucx2p0nVNI6wa10g1JL64DHwWQ','02_報告書/杉並区向け_アンケート調査報告書.pptx':'1CmDWks87PfpjTG-JhpvbFZ5uV28Za_xp','03_開発ドキュメント/CareOS_分岐入力UI設計.html':'13VLVfo85RhyocJTNzlVCgoaOfj0GKIDz','04_契約・法務/CareOS_先行技術調査報告書_簡易版.docx':'1JvSDOVkw1Aaa_hI7loRQddf3EHKnPerb','04_契約・法務/弁理士打ち合わせ資料_CareOS知財戦略.docx':'1pnaU5asOfja8OeQs04UXkvFvI8a8objM','07_参考資料/shinjigyou_koubo_2.pdf':'1yEKACgB41GmaJpWElV0foAgpUYBnV902','07_参考資料/最新資料/CareOS_補助金戦略_2トラック.pptx':'1J57Ga_pJmn7EJfmI0gxq8Xp4a9EnK0nN','07_参考資料/最新資料/サンライズDX政策との適合性.pdf':'1TqwZnnu8V2KbluFg_9wwgsqcrMJNa3AS','07_参考資料/最新資料/サンライズDX_補助金助成金_拡張版.xlsx':'1Mhih1ReWiGEbfdxrlnsNWMXlT-awYHzi','07_参考資料/最新資料/CareOS_補助金戦略_最適化分析レポート.md':'1amtg6NzOzF41CkIa75bUv-6WCNpMszt0','08_その他業務/名刺_校正指示書.docx':'1nuHTlwGkVNeyqFTabzeP7aWNIhjLbk5g','08_その他業務/サンライズガーデンHP改修指示書.docx':'1g4nkjgxq8BYpgVzpFEI9o-7fZADRpIxf'};
-function getDocUrl(doc){var id=DRIVE_FILE_MAP[doc.path+doc.name];return id?'https://drive.google.com/file/d/'+id+'/view':'https://drive.google.com/drive/search?q='+encodeURIComponent(doc.name.replace(/[.][^.]+$/,''));}
+// ========== fds.co.jp ドキュメントリンク（認証不要・公開アクセス） ==========
+var FDS_FILES={'ハンズオン支援/CareOS_先行技術調査報告書_簡易版.docx':1,'ハンズオン支援/r8_startup_chizai_shinseisyo_1.docx':1,'ハンズオン支援/r8_startup_chizai_shinseisyo_chuiten_1.pdf':1,'ハンズオン支援/JV社名候補_3案比較.pdf':1,'ハンズオン支援/ハンズオン支援_補足説明資料_サンライズ.pptx':1,'ハンズオン支援/ハンズオン支援_申請書_サンライズ.docx':1,'01_提案書/CareOS_IP戦略_知的財産保護計画.pptx':1,'01_提案書/CareOS_助成金補助金ロードマップ.pptx':1,'01_提案書/Universal-Care-OS_JV合意版_v11_final.pptx':1,'01_提案書/藤井議員向け_Universal_Care_OS.pptx':1,'01_提案書/藤井議員面談_プレゼンストーリー_0323.md':1,'02_報告書/アンケート中間報告書.docx':1,'02_報告書/杉並区向け_アンケート調査報告書.pptx':1,'03_開発ドキュメント/CareOS_分岐入力UI設計.html':1,'04_契約・法務/CareOS_先行技術調査報告書_簡易版.docx':1,'04_契約・法務/弁理士打ち合わせ資料_CareOS知財戦略.docx':1,'07_参考資料/shinjigyou_koubo_2.pdf':1,'07_参考資料/最新資料/CareOS_補助金戦略_2トラック.pptx':1,'07_参考資料/最新資料/サンライズDX政策との適合性.pdf':1,'07_参考資料/最新資料/サンライズDX_補助金助成金_拡張版.xlsx':1,'07_参考資料/最新資料/CareOS_補助金戦略_最適化分析レポート.md':1,'08_その他業務/名刺_校正指示書.docx':1,'08_その他業務/サンライズガーデンHP改修指示書.docx':1};
+function getDocUrl(doc){var key=doc.path+doc.name;var enc=key.split('/').map(function(s){return encodeURIComponent(s);}).join('/');var url='https://fds.co.jp/sunrise/docs/'+enc;var ext=doc.name.split('.').pop().toLowerCase();if(FDS_FILES[key]&&(ext==='pptx'||ext==='docx'||ext==='xlsx')){return'https://docs.google.com/gview?url='+encodeURIComponent(url);}if(FDS_FILES[key]){return url;}return'https://fds.co.jp/sunrise/';}
 
 // ========== DOC PANEL ==========
 function showDocPanel(task){
@@ -579,7 +579,7 @@ function showDocPanel(task){
       html += '<div class="doc-icon" style="color:'+iconColor+';font-weight:700;font-size:11px;background:'+iconColor+'15;padding:2px 4px;border-radius:3px">'+icon+'</div>';
       html += '<div class="doc-info">';
       html += '<div class="doc-name" style="color:#0071e3">'+doc.name+'</div>';
-      html += '<div class="doc-path">GitHub / '+doc.path+doc.name+'</div>';
+      html += '<div class="doc-path">fds.co.jp/sunrise / '+doc.path+doc.name+'</div>';
       if(doc.desc) html += '<div class="doc-desc">'+doc.desc+'</div>';
       html += '</div></a>';
     });
